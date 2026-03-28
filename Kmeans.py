@@ -1,4 +1,4 @@
-__authors__ = 'Kai Catalan Daniels, Daniel Hurtado Labandeira'
+__authors__ = ['Kai Catalan Daniels', 'Daniel Hurtado Labandeira']
 __group__ = '07'
 
 from math import sqrt
@@ -196,7 +196,6 @@ def get_colors(centroids: npt.NDArray[np.float64]) -> npt.NDArray[np.int64]:
     for each row of the numpy matrix 'centroids' returns the color label following the 11 basic colors as a LIST
     Args:
         centroids (numpy array): KxD 1st set of data points (usually centroid points)
-
     Returns:
         labels: list of K labels corresponding to one of the 11 basic colors
     """
