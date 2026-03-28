@@ -180,10 +180,10 @@ def distance(X: npt.NDArray[np.float64], C: npt.NDArray[np.float64]) -> npt.NDAr
 
     D = np.zeros((X.shape[0], C.shape[0]))
 
-    for x_id, x in X:
-        for c_id, c in C:
+    for x_id, x in enumerate(X):
+        for c_id, c in enumerate(C):
             dist = 0
-            for i in X.shape[1]:
+            for i in range(X.shape[1]):
                 dist += (x[i] - c[i])**2
             dist = sqrt(dist)
             D[x_id][c_id] = dist
