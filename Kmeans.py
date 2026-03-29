@@ -158,16 +158,15 @@ class KMeans:
         self.K = 2
         self.fit()
         prevWCD = self.withinClassDistance()
-        k = 3
         foundOptimal = False
-        while k <= max_K and not foundOptimal:
-            self.K = k
+        self.K = 3
+        while self.K <= max_K and not foundOptimal:
             self.fit()
             wcd = self.withinClassDistance()
-            foundOptimal = wcd / prevWCD < optDEC
+            foundOptimal = (wcd / prevWCD) > optDEC
             prevWCD = wcd
-            k += 1
-        self.K = k - 1
+            self.K += 1
+        self.K = self.K - 2
 
 
 def distance(
