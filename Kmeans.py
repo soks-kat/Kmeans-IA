@@ -34,7 +34,7 @@ class KMeans:
         self.old_centroids: farray
         self.labels: iarray
         self.num_iter: int = 0
-        self.k: int = K
+        self.K: int = K
         self._init_X(X)
         self._init_options(options)  # DICT options
 
@@ -78,12 +78,14 @@ class KMeans:
         Initialization of centroids
         """
         if self.options["km_init"].lower() == "first":
-            unique_indices = np.sort(np.unique(self.X, axis=0, return_index=True)[1])
-            self.centroids = self.X[unique_indices[:self.k]]
+            unique_indices = np.sort(
+                np.unique(self.X, axis=0, return_index=True)[1]
+            )  # PERF:
+            self.centroids = self.X[unique_indices[: self.K]]
             self.old_centroids = self.centroids.copy()
         else:
             self.centroids = np.random.rand(
-                self.k, self.X.shape[1]  # pyright: ignore[reportAny]
+                self.K, self.X.shape[1]  # pyright: ignore[reportAny]
             )
             self.old_centroids = self.centroids.copy()
 
@@ -98,15 +100,15 @@ class KMeans:
         """
         Calculates coordinates of centroids based on the coordinates of all the points assigned to the centroid
         """
-        sums = np.zeros((self.k, self.X.shape[1]))
-        counts = np.zeros(self.k)
+        sums = np.zeros((self.K, self.X.shape[1]))
+        counts = np.zeros(self.K)
         for i in range(self.X.shape[0]):
             label = self.labels[i]
             sums[label] += self.X[i]
             counts[label] += 1
 
         self.old_centroids = self.centroids.copy()
-        for i in range(self.k):
+        for i in range(self.K):
             if counts[i] > 0:
                 self.centroids[i] = sums[i] / counts[i]
             # else keep old
@@ -148,13 +150,13 @@ class KMeans:
         sets the best k analysing the results up to 'max_K' clusters
         """
         optDEC = self.options["opt_DEC"]
-        self.k = 2
+        self.K = 2
         self.fit()
         prevWCD = self.withinClassDistance()
         k = 3
         foundOptimal = False
         while k < max_K and not foundOptimal:
-            self.k = k
+            self.K = k
             self.fit()
             wcd = self.withinClassDistance()
             foundOptimal = wcd / prevWCD < optDEC

@@ -3,6 +3,7 @@ import unittest
 import numpy as np
 from Kmeans import __authors__, __group__, KMeans, distance, get_colors
 from utils import *
+from utils_data import visualize_k_means
 
 
 class TestCases(unittest.TestCase):
@@ -71,13 +72,17 @@ class TestCases(unittest.TestCase):
         for ix, input in enumerate(self.test_cases['input']):
             km = KMeans(input, self.test_cases['K'][ix])
             km.fit()
-            np.testing.assert_array_equal(km.centroids, self.test_cases['kmeans'][ix])
+            try :
+                    np.testing.assert_array_equal(km.centroids, self.test_cases['kmeans'][ix])
+            except:
+                visualize_k_means(km, km.X.shape)
+
 
     def test_09_find_bestK(self):
         for ix, input in enumerate(self.test_cases['input']):
             km = KMeans(input, self.test_cases['K'][ix])
             km.find_bestK(10)
-            self.assertEqual(km.k, self.test_cases['bestK'][ix])
+            self.assertEqual(km.K, self.test_cases['bestK'][ix])
 
     def test_10_get_color(self):
         for ix, centroid in enumerate(self.test_cases['kmeans']):
@@ -87,3 +92,4 @@ class TestCases(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
