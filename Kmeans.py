@@ -113,12 +113,13 @@ class KMeans:
                 self.centroids[i] = sums[i] / counts[i]
             # else keep old
 
-    def converges(self, error: float = 0) -> np.bool:
+    def converges(self) -> np.bool:
         """
         Checks if there is a difference between current and old centroids
         """
-        diffs = np.subtract(self.centroids, self.old_centroids)
-        return np.all(diffs <= error)
+        # diffs = np.subtract(self.centroids, self.old_centroids)
+        # return np.all(diffs <= error)
+        return np.allclose(self.centroids, self.old_centroids, atol=self.options['tolerance'], rtol=0.0)
 
     def fit(self) -> None:
         """
@@ -126,12 +127,13 @@ class KMeans:
         than the maximum number of iterations.
         """
         self._init_centroids()
+        self.get_labels()
         i: int = 0
         maxIterations = self.options["max_iter"]
         converged = False
         while i < maxIterations and not converged:
-            self.get_labels()
             self.get_centroids()
+            self.get_labels()
             converged = self.converges()
             i += 1
 
@@ -140,12 +142,11 @@ class KMeans:
         returns the within class distance of the current clustering
         """
 
-        return (
-            np.sum(np.square(np.subtract(self.X, self.centroids[self.labels])))
-            / self.X.shape[0]
-        )
+        distance = np.sum(np.square(np.subtract(self.X, self.centroids[self.labels])))/ self.X.shape[0]
+        print(distance)
+        return distance
 
-    def find_bestK(self, max_K: int) -> int:
+    def find_bestK(self, max_K: int):
         """
         sets the best k analysing the results up to 'max_K' clusters
         """
@@ -164,9 +165,9 @@ class KMeans:
             k += 1
 
         if foundOptimal:
-            return k - 1
+            self.K = k - 1
         else:
-            return k
+            self.K = k
 
 
 def distance(
