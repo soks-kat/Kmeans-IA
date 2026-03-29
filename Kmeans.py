@@ -1,4 +1,4 @@
-__authors__ = ["0000000", "1703664"]
+__authors__ = ["1752407", "1703664"]
 __group__ = "07"
 
 from math import sqrt
@@ -78,36 +78,38 @@ class KMeans:
         Initialization of centroids
         """
         if self.options["km_init"].lower() == "first":
-            self.centroids = self.X[
-                np.sort(np.unique(self.X, axis=0, return_index=True)[1])
-            ]
-            self.old_centroids = self.centroids
+            unique_indices = np.sort(np.unique(self.X, axis=0, return_index=True)[1])
+            self.centroids = self.X[unique_indices[:self.k]]
+            self.old_centroids = self.centroids.copy()
         else:
             self.centroids = np.random.rand(
                 self.k, self.X.shape[1]  # pyright: ignore[reportAny]
             )
-            self.old_centroids = self.centroids
+            self.old_centroids = self.centroids.copy()
 
     def get_labels(self) -> None:
         """
         Calculates the closest centroid of all points in X and assigns each point to the closest centroid
         """
         distances = distance(self.X, self.centroids)  # [N x K]
-        self.labels = np.argmax(distances, axis=1)  # [N]
+        self.labels = np.argmin(distances, axis=1)  # [N]
 
     def get_centroids(self) -> None:
         """
         Calculates coordinates of centroids based on the coordinates of all the points assigned to the centroid
         """
         sums = np.zeros((self.k, self.X.shape[1]))
-        counts = np.zeros((self.k, 1))
-        labels = self.labels
+        counts = np.zeros(self.k)
         for i in range(self.X.shape[0]):
-            sums[labels[i]] = np.add(sums[labels[i]], self.X[i])
-            counts[labels[i]] += 1
+            label = self.labels[i]
+            sums[label] += self.X[i]
+            counts[label] += 1
 
-        self.old_centroids = self.centroids
-        self.centroids = np.divide(sums, np.broadcast_to(counts, sums.shape))
+        self.old_centroids = self.centroids.copy()
+        for i in range(self.k):
+            if counts[i] > 0:
+                self.centroids[i] = sums[i] / counts[i]
+            # else keep old
 
     def converges(self, error: float = 0) -> np.bool:
         """
