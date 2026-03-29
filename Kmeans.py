@@ -209,4 +209,5 @@ def get_colors(centroids: farray) -> iarray:
     Returns:
         labels: list of K labels corresponding to one of the 11 basic colors
     """
-    return np.argmax(utils.get_color_prob(centroids), axis=0)
+    result = utils.colors[ np.argmax(utils.get_color_prob(centroids), axis=1)]
+    return result
