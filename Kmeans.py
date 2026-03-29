@@ -119,7 +119,9 @@ class KMeans:
         """
         # diffs = np.subtract(self.centroids, self.old_centroids)
         # return np.all(diffs <= error)
-        return np.allclose(self.centroids, self.old_centroids, atol=self.options['tolerance'], rtol=0.0)
+        return np.allclose(
+            self.centroids, self.old_centroids, atol=self.options["tolerance"], rtol=0.0
+        )
 
     def fit(self) -> None:
         """
@@ -136,14 +138,16 @@ class KMeans:
             self.get_labels()
             converged = self.converges()
             i += 1
+        self.num_iter = i
 
     def withinClassDistance(self) -> np.float64:
         """
         returns the within class distance of the current clustering
         """
 
-        distance = np.sum(np.square(np.subtract(self.X, self.centroids[self.labels])))/ self.X.shape[0]
-        print(distance)
+        distance = (
+            np.sum(np.square(self.X - self.centroids[self.labels])) / self.X.shape[0]
+        )
         return distance
 
     def find_bestK(self, max_K: int):
@@ -156,18 +160,14 @@ class KMeans:
         prevWCD = self.withinClassDistance()
         k = 3
         foundOptimal = False
-        while k < max_K and not foundOptimal:
+        while k <= max_K and not foundOptimal:
             self.K = k
             self.fit()
             wcd = self.withinClassDistance()
             foundOptimal = wcd / prevWCD < optDEC
             prevWCD = wcd
             k += 1
-
-        if foundOptimal:
-            self.K = k - 1
-        else:
-            self.K = k
+        self.K = k - 1
 
 
 def distance(
