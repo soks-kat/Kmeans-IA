@@ -6,10 +6,10 @@ from typing import TypedDict
 import numpy as np
 import numpy.typing as npt
 from pandas import unique
-import utils
+from utils import *
 
-type farray = npt.NDArray[np.float64]
-type iarray = npt.NDArray[np.int64]
+# type farray = npt.NDArray[np.float64]
+# type iarray = npt.NDArray[np.int64]
 
 
 class Options(TypedDict):
@@ -23,22 +23,22 @@ class Options(TypedDict):
 
 class KMeans:
 
-    def __init__(self, X: farray, K: int = 1, options: Options | None = None) -> None:
+    def __init__(self, X: npt.NDArray[np.float64], K: int = 1, options: Options | None = None) -> None:
         """
         Constructor of KMeans class
             Args:
                 K (int): Number of cluster
                 options (dict): dictionary with options
         """
-        self.centroids: farray
-        self.old_centroids: farray
-        self.labels: iarray
+        self.centroids: npt.NDArray[np.float64]
+        self.old_centroids: npt.NDArray[np.float64]
+        self.labels: npt.NDArray[np.int64]
         self.num_iter: int = 0
         self.K: int = K
         self._init_X(X)
         self._init_options(options)  # DICT options
 
-    def _init_X(self, mX: farray) -> None:
+    def _init_X(self, mX: npt.NDArray[np.float64]) -> None:
         """Initialization of all pixels, sets X as an array of data in vector form (PxD)
         Args:
             X (list or np.array): list(matrix) of all pixel values
@@ -51,7 +51,7 @@ class KMeans:
         if mX.ndim != 2:
             shape = mX.shape
             mX = mX.reshape(shape[0] * shape[1], shape[2])  # pyright: ignore[reportAny]
-        self.X: farray = mX
+        self.X: npt.NDArray[np.float64] = mX
 
     def _init_options(self, options: Options | None) -> None:
         """
@@ -113,7 +113,7 @@ class KMeans:
                 self.centroids[i] = sums[i] / counts[i]
             # else keep old
 
-    def converges(self) -> np.bool:
+    def converges(self) -> bool:
         """
         Checks if there is a difference between current and old centroids
         """
@@ -201,7 +201,7 @@ def distance(
     return D
 
 
-def get_colors(centroids: farray) -> iarray:
+def get_colors(centroids: npt.NDArray[np.float64]) -> list[np.int64]:
     """
     for each row of the numpy matrix 'centroids' returns the color label following the 11 basic colors as a LIST
     Args:
@@ -209,5 +209,5 @@ def get_colors(centroids: farray) -> iarray:
     Returns:
         labels: list of K labels corresponding to one of the 11 basic colors
     """
-    result = utils.colors[ np.argmax(utils.get_color_prob(centroids), axis=1)]
-    return result
+    result = colors[ np.argmax(get_color_prob(centroids), axis=1)]
+    return list(result) # Pel corrector
