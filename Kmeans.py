@@ -23,7 +23,9 @@ class Options(TypedDict):
 
 class KMeans:
 
-    def __init__(self, X: npt.NDArray[np.float64], K: int = 1, options: Options | None = None) -> None:
+    def __init__(
+        self, X: npt.NDArray[np.float64], K: int = 1, options: Options | None = None
+    ) -> None:
         """
         Constructor of KMeans class
             Args:
@@ -187,18 +189,12 @@ def distance(
     ##  YOU MUST REMOVE THE REST OF THE CODE OF THIS FUNCTION
     ##  AND CHANGE FOR YOUR OWN CODE
     #########################################################
+    diff = np.tile(C, (X.shape[0], 1, 1)) - np.reshape(
+        np.tile(X, C.shape[0]), (X.shape[0], C.shape[0], X.shape[1])
+    )
+    result = np.sqrt(np.sum((diff**2), axis=2))
+    return result
 
-    D = np.zeros((X.shape[0], C.shape[0]))
-
-    for x_id, x in enumerate(X):
-        for c_id, c in enumerate(C):
-            dist = 0
-            for i in range(X.shape[1]):
-                dist += (x[i] - c[i]) ** 2
-            dist = sqrt(dist)
-            D[x_id][c_id] = dist
-
-    return D
 
 
 def get_colors(centroids: npt.NDArray[np.float64]) -> list[np.int64]:
@@ -209,5 +205,5 @@ def get_colors(centroids: npt.NDArray[np.float64]) -> list[np.int64]:
     Returns:
         labels: list of K labels corresponding to one of the 11 basic colors
     """
-    result = colors[ np.argmax(get_color_prob(centroids), axis=1)]
-    return list(result) # Pel corrector
+    result = colors[np.argmax(get_color_prob(centroids), axis=1)]
+    return list(result)  # Pel corrector
