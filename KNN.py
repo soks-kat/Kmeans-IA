@@ -1,10 +1,14 @@
-__authors__ = 'TO_BE_FILLED'
-__group__ = 'TO_BE_FILLED'
+__authors__ = ["1752408", "1703664"]
+__group__ = "07"
 
 import numpy as np
 import math
 import operator
 from scipy.spatial.distance import cdist
+
+def row_unique(row):
+    cl, no = np.unique(row, return_counts=True)
+    return cl[np.argmax(no)]
 
 
 class KNN:
@@ -21,11 +25,13 @@ class KNN:
         :param train_data: PxMxNx3 matrix corresponding to P color images
         :return: assigns the train set to the matrix self.train_data shaped as PxD (P points in a D dimensional space)
         """
-        #######################################################
-        ##  YOU MUST REMOVE THE REST OF THE CODE OF THIS FUNCTION
-        ##  AND CHANGE FOR YOUR OWN CODE
-        #######################################################
-        self.train_data = np.random.randint(8, size=[10, 4800])
+        if train_data.dtype != np.float64:
+            train_data = train_data.astype("float64")
+
+        if train_data.ndim != 2:
+            shape = train_data.shape
+            train_data = train_data.reshape(shape[0] * shape[1], shape[2])
+        self.train_data = train_data
 
     def get_k_neighbours(self, test_data, k):
         """
@@ -47,11 +53,7 @@ class KNN:
         :return: 1 array of Nx1 elements. For each of the rows in self.neighbors gets the most voted value
                 (i.e. the class at which that row belongs)
         """
-        #######################################################
-        ##  YOU MUST REMOVE THE REST OF THE CODE OF THIS FUNCTION
-        ##  AND CHANGE FOR YOUR OWN CODE
-        #######################################################
-        return np.random.randint(10, size=self.neighbors.size), np.random.random(self.neighbors.size)
+        return np.apply_along_axis(row_unique, 1, self.neighbors)
 
     def predict(self, test_data, k):
         """
