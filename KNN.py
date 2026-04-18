@@ -10,10 +10,11 @@ from scipy.spatial.distance import cdist
 from scipy.stats import mode
 
 
-def row_unique(row):
+def row_unique(row) -> np.str_:
     cl, idx, no = np.unique(row, return_counts=True, return_index=True, equal_nan=False)
-    cl = cl[np.argsort(idx)]
-    no = no[np.argsort(idx)]
+    sorted_idx = np.argsort(idx)
+    cl = cl[sorted_idx]
+    no = no[sorted_idx]
     return cl[np.argmax(no)]
 
 
@@ -68,7 +69,8 @@ class KNN:
         :return: 1 array of Nx1 elements. For each of the rows in self.neighbors gets the most voted value
                 (i.e. the class at which that row belongs)
         """
-        return np.apply_along_axis(row_unique, 1, self.neighbors)
+        result = np.apply_along_axis(row_unique, 1, self.neighbors)
+        return result
 
     def predict(self, test_data, k):
         """
