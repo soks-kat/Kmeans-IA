@@ -14,11 +14,9 @@ from scipy.stats import mode
 
 class KNN:
     def row_unique(self, row: npt.NDArray[np.intp]) -> np.str_:
-        cl, idx, no = np.unique(row, return_counts=True, return_index=True, equal_nan=False)
-        sorted_idx = np.argsort(idx)
-        cl = cl[sorted_idx]
-        no = no[sorted_idx]
-        return cl[np.argmax(no)]
+        bincounts = np.bincount(row)
+        counts = bincounts[row]
+        return row[np.argmax(counts)]
     def __init__(self, train_data, labels):
         self._init_train(train_data)
         self.labels = np.array(labels)
