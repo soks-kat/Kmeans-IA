@@ -2,12 +2,18 @@ __authors__ = ["1752408", "1703664"]
 __group__ = "07"
 
 import numpy as np
-import math
-import operator
+import numpy.typing as npt
+
+# import math
+# import operator
 from scipy.spatial.distance import cdist
+from scipy.stats import mode
+
 
 def row_unique(row):
-    cl, no = np.unique(row, return_counts=True)
+    cl, idx, no = np.unique(row, return_counts=True, return_index=True, equal_nan=False)
+    cl = cl[np.argsort(idx)]
+    no = no[np.argsort(idx)]
     return cl[np.argmax(no)]
 
 
@@ -30,10 +36,10 @@ class KNN:
 
         if train_data.ndim != 2:
             shape = train_data.shape
-            train_data = train_data.reshape(shape[0] * shape[1], shape[2])
+            train_data = train_data.reshape(shape[0], shape[1] * shape[2])
         self.train_data = train_data
 
-    def get_k_neighbours(self, test_data, k):
+    def get_k_neighbours(self, test_data: npt.NDArray[np.float64], k: int):
         """
         given a test_data matrix calculates de k nearest neighbours at each point (row) of test_data on self.neighbors
         :param test_data: array that has to be shaped to a NxD matrix (N points in a D dimensional space)
@@ -45,7 +51,16 @@ class KNN:
         ##  YOU MUST REMOVE THE REST OF THE CODE OF THIS FUNCTION
         ##  AND CHANGE FOR YOUR OWN CODE
         #######################################################
-        self.neighbors = np.random.randint(k, size=[test_data.shape[0], k])
+        if test_data.dtype != np.float64:
+            test_data = test_data.astype("float64")
+
+        if test_data.ndim != 2:
+            shape = test_data.shape
+            test_data = test_data.reshape(shape[0], shape[1] * shape[2])
+        neighbor_idx: npt.NDArray[np.intp] = cdist(
+            test_data, self.train_data, "euclidean"
+        ).argsort(axis=1)
+        self.neighbors = self.labels[neighbor_idx[:,:k]]
 
     def get_class(self):
         """
