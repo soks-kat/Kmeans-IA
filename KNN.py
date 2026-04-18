@@ -10,18 +10,19 @@ from scipy.spatial.distance import cdist
 from scipy.stats import mode
 
 
-def row_unique(row) -> np.str_:
-    cl, idx, no = np.unique(row, return_counts=True, return_index=True, equal_nan=False)
-    sorted_idx = np.argsort(idx)
-    cl = cl[sorted_idx]
-    no = no[sorted_idx]
-    return cl[np.argmax(no)]
 
 
 class KNN:
+    def row_unique(self, row: npt.NDArray[np.intp]) -> np.str_:
+        cl, idx, no = np.unique(row, return_counts=True, return_index=True, equal_nan=False)
+        sorted_idx = np.argsort(idx)
+        cl = cl[sorted_idx]
+        no = no[sorted_idx]
+        return cl[np.argmax(no)]
     def __init__(self, train_data, labels):
         self._init_train(train_data)
         self.labels = np.array(labels)
+        self.unique_labels, self.labels_idx = np.unique(labels, return_inverse=True)
         #############################################################
         ##  THIS FUNCTION CAN BE MODIFIED FROM THIS POINT, if needed
         #############################################################
@@ -61,6 +62,7 @@ class KNN:
         neighbor_idx: npt.NDArray[np.intp] = cdist(
             test_data, self.train_data, "euclidean"
         ).argsort(axis=1)
+        self.neighbors_idx = self.labels_idx[neighbor_idx[:,:k]]
         self.neighbors = self.labels[neighbor_idx[:,:k]]
 
     def get_class(self):
@@ -69,8 +71,8 @@ class KNN:
         :return: 1 array of Nx1 elements. For each of the rows in self.neighbors gets the most voted value
                 (i.e. the class at which that row belongs)
         """
-        result = np.apply_along_axis(row_unique, 1, self.neighbors)
-        return result
+        result = np.apply_along_axis(self.row_unique, 1, self.neighbors_idx)
+        return self.unique_labels[result]
 
     def predict(self, test_data, k):
         """
