@@ -2,25 +2,23 @@ __authors__ = ["1752408", "1703664"]
 __group__ = "07"
 
 import numpy as np
-import numpy.typing as npt
 
 # import math
 # import operator
 from scipy.spatial.distance import cdist
-from scipy.stats import mode
 
 
 
 
 class KNN:
-    def row_unique(self, row: npt.NDArray[np.intp]) -> np.str_:
+    def row_unique(self, row):
         bincounts = np.bincount(row)
         counts = bincounts[row]
         return row[np.argmax(counts)]
     def __init__(self, train_data, labels):
         self._init_train(train_data)
-        self.labels = np.array(labels)
-        self.unique_labels, self.labels_idx = np.unique(labels, return_inverse=True)
+        self.labels = np.array(labels) # (a, a, b)
+        self.unique_labels, self.labels_idx = np.unique(labels, return_inverse=True) # (0, 1) (0, 0, 1)
         #############################################################
         ##  THIS FUNCTION CAN BE MODIFIED FROM THIS POINT, if needed
         #############################################################
@@ -39,7 +37,7 @@ class KNN:
             train_data = train_data.reshape(shape[0], shape[1] * shape[2])
         self.train_data = train_data
 
-    def get_k_neighbours(self, test_data: npt.NDArray[np.float64], k: int):
+    def get_k_neighbours(self, test_data, k):
         """
         given a test_data matrix calculates de k nearest neighbours at each point (row) of test_data on self.neighbors
         :param test_data: array that has to be shaped to a NxD matrix (N points in a D dimensional space)
@@ -57,7 +55,7 @@ class KNN:
         if test_data.ndim != 2:
             shape = test_data.shape
             test_data = test_data.reshape(shape[0], shape[1] * shape[2])
-        neighbor_idx: npt.NDArray[np.intp] = cdist(
+        neighbor_idx= cdist(
             test_data, self.train_data, "euclidean"
         ).argsort(axis=1)
         self.neighbors_idx = self.labels_idx[neighbor_idx[:,:k]]
