@@ -8,17 +8,18 @@ import numpy as np
 from scipy.spatial.distance import cdist
 
 
-
-
 class KNN:
     def row_unique(self, row):
         bincounts = np.bincount(row)
         counts = bincounts[row]
         return row[np.argmax(counts)]
+
     def __init__(self, train_data, labels):
         self._init_train(train_data)
-        self.labels = np.array(labels) # (a, a, b)
-        self.unique_labels, self.labels_idx = np.unique(labels, return_inverse=True) # (0, 1) (0, 0, 1)
+        self.labels = np.array(labels)  # (a, a, b)
+        self.unique_labels, self.labels_idx = np.unique(
+            labels, return_inverse=True
+        )  # (0, 1) (0, 0, 1)
         #############################################################
         ##  THIS FUNCTION CAN BE MODIFIED FROM THIS POINT, if needed
         #############################################################
@@ -55,11 +56,9 @@ class KNN:
         if test_data.ndim != 2:
             shape = test_data.shape
             test_data = test_data.reshape(shape[0], shape[1] * shape[2])
-        neighbor_idx= cdist(
-            test_data, self.train_data, "euclidean"
-        ).argsort(axis=1)
-        self.neighbors_idx = self.labels_idx[neighbor_idx[:,:k]]
-        self.neighbors = self.labels[neighbor_idx[:,:k]]
+        neighbor_idx = cdist(test_data, self.train_data, "euclidean").argsort(axis=1)
+        self.neighbors_idx = self.labels_idx[neighbor_idx[:, :k]]
+        self.neighbors = self.labels[neighbor_idx[:, :k]]
 
     def get_class(self):
         """

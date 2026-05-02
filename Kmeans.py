@@ -42,9 +42,7 @@ class KMeans:
 
     def _init_centroids(self):
         if self.options["km_init"].lower() == "first":
-            unique_indices = np.sort(
-                np.unique(self.X, axis=0, return_index=True)[1]
-            )
+            unique_indices = np.sort(np.unique(self.X, axis=0, return_index=True)[1])
             self.centroids = self.X[unique_indices[: self.K]]
             self.old_centroids = self.centroids.copy()
         else:
@@ -64,8 +62,7 @@ class KMeans:
 
     def converges(self):
         return np.allclose(
-            self.centroids, self.old_centroids,
-            atol=self.options["tolerance"], rtol=0.0
+            self.centroids, self.old_centroids, atol=self.options["tolerance"], rtol=0.0
         )
 
     def fit(self):
