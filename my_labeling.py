@@ -1,7 +1,7 @@
 __authors__ = "TO_BE_FILLED"
 __group__ = "TO_BE_FILLED"
 
-from Kmeans import KMeans, Options
+from Kmeans import KMeans
 from utils_data import read_dataset, read_extended_dataset, crop_images
 import utils_data
 
