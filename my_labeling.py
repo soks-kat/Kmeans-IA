@@ -14,7 +14,7 @@ from utils_data import (
 import utils_data
 
 
-def retrieval_by_color(imgs=[], cols=[[]], col_pct=[[]], queries=[]):
+def retrieval_by_color(imgs=[], cols=[[]], col_pct=[[]], queries=[]): #TODO: Return indices
     def intersect(col_row=[], row_colPct=[]):
         idx = np.intersect1d(col_row, queries, return_indices=True)
         hit_col, hit_pct = col_row[idx], row_colPct[idx]
@@ -26,7 +26,7 @@ def retrieval_by_color(imgs=[], cols=[[]], col_pct=[[]], queries=[]):
     return imgs[idx][np.argsort(match_pct[idx])]
 
 
-def retrieval_by_shape(imgs=[], shape=[[]], neigh_count=[], queries=[]):
+def retrieval_by_shape(imgs=[], shape=[[]], neigh_count=[], queries=[]): #TODO: Return indices
     def intersect(labels_row=[]):
         return np.flatnonzero(np.intersect1d(labels_row, queries))
 
@@ -43,7 +43,7 @@ def retrieval_combined(
     col_pct=[[]],
     col_queries=[],
     shape_queries=[],
-):
+): #TODO: Return indices
     return retrieval_by_shape(
         retrieval_by_color(imgs, col, col_pct, col_queries),
         shape,
@@ -84,7 +84,7 @@ if __name__ == "__main__":
         test_color_labels[:10],
         test_class_labels[:10],
     )
-    ## Predict
+    # Predict
     color_pred = []
     for img in trueTest:
         km = KMeans(img, 1, defaults)
@@ -95,32 +95,35 @@ if __name__ == "__main__":
     knn = KNN(train_imgs, train_class_labels)
     shape_pred = knn.predict(trueTest, 10)
 
+    # Qualitative
     ## Query
     query_col = input("Color query: ")
     query_shape = input("Shape query: ")
     if query_col:
         if query_shape:
-            result = retrieval_combined(
+            filtered_idx = retrieval_combined(
                 trueTest, shape_pred, [[]], color_pred, [[]], query_col, query_shape
             )
         else:
-            result = retrieval_by_color(trueTest, color_pred, [[]], query_col)
+            filtered_idx = retrieval_by_color(trueTest, color_pred, [[]], query_col)
     elif query_shape:
-        result = retrieval_by_shape(trueTest, shape_pred, [[]], query_shape)
+        filtered_idx = retrieval_by_shape(trueTest, shape_pred, [[]], query_shape)
     else:
         print("No queries!")
 
-    ## Visualize Color filter
+    # Quantitative
+
+    # Visualize
     max_visualize_count = 25
     if query_col:
-        ok = color_pred == trueCol
+        ok = color_pred[filtered_idx] == trueCol[filtered_idx]
         visualize_retrieval(
-            trueTest, max_visualize_count, color_pred, ok, "Color filtering", query_col
+            trueTest[filtered_idx], max_visualize_count, color_pred, ok, "Color filtering", query_col
         )
     if query_shape:
-        ok = shape_pred == trueShape
+        ok = shape_pred[filtered_idx] == trueShape[filtered_idx]
         visualize_retrieval(
-            trueTest,
+            trueTest[filtered_idx],
             max_visualize_count,
             shape_pred,
             ok,
