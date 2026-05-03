@@ -1,6 +1,6 @@
 from utils import rgb2gray
 import time
-from Kmeans import KMeans
+from Kmeans import KMeans, get_colors
 from KNN import KNN
 import numpy as np
 import matplotlib.pyplot as plt
@@ -24,7 +24,7 @@ def menu():
         print("Select type of analysis to perform:")
         print(" 1. Qualitative")
         print(" 2. Quantitative")
-        t = input("==>")
+        t = input("==> ")
     m = ""
     if t == "1":
         while m not in ("1", "2", "3"):
@@ -33,7 +33,7 @@ def menu():
             print(" 2. Shape Retrieval")
             print(" 3. Combined retrieval")
 
-            m = input("==>")
+            m = input("==> ")
         return ["qualCol", "qualShape", "qualCombined"][int(m) - 1]
     elif t == "2":
         while m not in ("1", "2", "3"):
@@ -41,7 +41,7 @@ def menu():
             print(" 1. Kmean_statistics")
             print(" 2. Shape Accuracy")
             print(" 3. Color Accuracy")
-            m = input("==>")
+            m = input("==> ")
         return ["quantKmeanStats", "quantShapeAcc", "quantColAcc"][int(m) - 1]
     raise Exception("Invalid Menu option")
 
@@ -75,6 +75,20 @@ def kmean_statistics(classifier: KMeans, Kmax):
     plt.plot(range(2, Kmax + 1), iterations)
 
     plt.show()
+
+
+def get_shape_accuracy(shape_labels, ground_truth):
+    return sum(shape_labels == ground_truth) / len(shape_labels)
+
+def get_color_accuracy(color_labels, ground_truth):
+    result = 0
+    for colors, trueColors in zip(color_labels, ground_truth):
+        if len(colors) > len(trueColors):
+            colors = colors[:len(trueColors)]
+        accuracy = len(np.intersect1d(colors, trueColors)) / len(trueColors)
+        result += accuracy
+    return result/len(ground_truth)
+
 
 
 def retrieval_by_color(
@@ -131,9 +145,9 @@ if __name__ == "__main__":
         test_color_labels,
     ) = read_dataset(root_folder="./images/", gt_json="./images/gt.json")
     n = 10
-    train_imgs = train_imgs[:n]
-    train_class_labels = train_class_labels[:n]
-    train_color_labels = train_color_labels[:n]
+    # train_imgs = train_imgs[:n]
+    # train_class_labels = train_class_labels[:n]
+    # train_color_labels = train_color_labels[:n]
     test_imgs = test_imgs[:n]
     test_class_labels = test_class_labels[:n]
     test_color_labels = test_color_labels[:n]
@@ -157,8 +171,9 @@ if __name__ == "__main__":
     color_pred = []
     km = [KMeans(test_imgs[i], 3, defaults) for i in range(n)]
     for classifier in km:
+        classifier.find_bestK(4)
         classifier.fit()
-        color_pred.append(classifier.centroids)
+        color_pred.append(np.array(get_colors(classifier.centroids)))
 
     knn = KNN(rgb2gray(train_imgs), train_class_labels)
     shape_pred = knn.predict(rgb2gray(test_imgs), 10)
@@ -226,8 +241,9 @@ if __name__ == "__main__":
                     kmax = ""
             kmean_statistics(km[t - 1], kmax)
         case "quantShapeAcc":
-            pass
+            print(f"Shape accuracy: {get_shape_accuracy(shape_pred, test_class_labels)}")
         case "quantColAcc":
-            pass
+            print(f"Color accuracy: {get_color_accuracy(color_pred, test_color_labels)}")
+
 
     # Visualize
