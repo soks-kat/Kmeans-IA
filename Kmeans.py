@@ -41,13 +41,49 @@ class KMeans:
             self.options = {**defaults, **options}
 
     def _init_centroids(self):
+        assert type(self.options["km_init"]) is str
         if self.options["km_init"].lower() == "first":
             unique_indices = np.sort(np.unique(self.X, axis=0, return_index=True)[1])
             self.centroids = self.X[unique_indices[: self.K]]
-            self.old_centroids = self.centroids.copy()
+
+        if self.options["km_init"].lower() == "basic":
+            assert self.K <= 14, "This method can at most implement 11 colors"
+            basic_colors = np.array(
+                [
+                    [0, 0, 0],
+                    [255, 0, 0],
+                    [255, 128, 0],
+                    [255, 0, 128],
+                    [0, 255, 0],
+                    [128, 255, 0],
+                    [0, 255, 128],
+                    [0, 0, 255],
+                    [128, 0, 255],
+                    [0, 128, 255],
+                    [255, 255, 0],
+                    [255, 0, 255],
+                    [0, 255, 255],
+                    [255, 255, 255],
+                ]
+            )
+            closest = basic_colors[
+                np.argsort(np.sum(distance(basic_colors, self.X), axis=1))
+            ]
+            self.centroids = closest[: self.K]
+
+        if self.options["km_init"].lower() == "kmeans++":
+            rng = np.random.default_rng()
+            self.centroids = np.zeros((self.K, 3))
+            p = np.ones(self.X.shape[0]) / self.X.shape[0]
+            for i in range(1, self.K):
+                self.centroids[i] = rng.choice(self.X, p=p)
+                distances = np.min(distance(self.X, self.centroids[:i]), axis=1)
+                p = distances / np.sum(distances, dtype=float)
+
         else:
-            self.centroids = np.random.rand(self.K, self.X.shape[1])
-            self.old_centroids = self.centroids.copy()
+            self.centroids = np.random.rand(self.K, self.X.shape[1]) * 255
+
+        self.old_centroids = self.centroids.copy()
 
     def get_labels(self):
         distances = distance(self.X, self.centroids)
