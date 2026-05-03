@@ -1,5 +1,9 @@
+from utils import rgb2gray
+import time
+from Kmeans import KMeans
 from KNN import KNN
 import numpy as np
+import matplotlib.pyplot as plt
 
 __authors__ = "TO_BE_FILLED"
 __group__ = "TO_BE_FILLED"
@@ -14,7 +18,68 @@ from utils_data import (
 import utils_data
 
 
-def retrieval_by_color(imgs=[], cols=[[]], col_pct=[[]], queries=[]): #TODO: Return indices
+def menu():
+    t = ""
+    while t not in ("1", "2"):
+        print("Select type of analysis to perform:")
+        print(" 1. Qualitative")
+        print(" 2. Quantitative")
+        t = input("==>")
+    m = ""
+    if t == "1":
+        while m not in ("1", "2", "3"):
+            print(" Select procedure:")
+            print(" 1. Color Retrieval")
+            print(" 2. Shape Retrieval")
+            print(" 3. Combined retrieval")
+
+            m = input("==>")
+        return ["qualCol", "qualShape", "qualCombined"][int(m) - 1]
+    elif t == "2":
+        while m not in ("1", "2", "3"):
+            print("Select procedure: ")
+            print(" 1. Kmean_statistics")
+            print(" 2. Shape Accuracy")
+            print(" 3. Color Accuracy")
+            m = input("==>")
+        return ["quantKmeanStats", "quantShapeAcc", "quantColAcc"][int(m) - 1]
+    raise Exception("Invalid Menu option")
+
+
+def kmean_statistics(classifier: KMeans, Kmax):
+    wcd = np.zeros(Kmax - 1)
+    iterations = np.zeros(Kmax - 1)
+    convTime = np.zeros(Kmax - 1)
+    for i in range(2, Kmax):
+        classifier.K = i
+        init = time.time()
+        classifier.fit()
+
+        convTime[i - 2] = time.time() - init
+        wcd[i - 2] = classifier.withinClassDistance()
+        iterations[i - 2] = classifier.num_iter
+
+    plt.subplot(131)
+    plt.title("Convergence Time (ms)")
+    plt.xlabel("K")
+    plt.plot(range(2, Kmax + 1), convTime)
+
+    plt.subplot(132)
+    plt.title("WCD")
+    plt.xlabel("K")
+    plt.plot(range(2, Kmax + 1), wcd)
+
+    plt.subplot(133)
+    plt.title("Iterations")
+    plt.xlabel("K")
+    plt.plot(range(2, Kmax + 1), iterations)
+
+    plt.show()
+
+
+def retrieval_by_color(
+    imgs=[], cols=[[]], col_pct=[[]], queries=[]
+):  # TODO: Return indices
     def intersect(col_row=[], row_colPct=[]):
         idx = np.intersect1d(col_row, queries, return_indices=True)
         hit_col, hit_pct = col_row[idx], row_colPct[idx]
@@ -26,7 +91,9 @@ def retrieval_by_color(imgs=[], cols=[[]], col_pct=[[]], queries=[]): #TODO: Ret
     return imgs[idx][np.argsort(match_pct[idx])]
 
 
-def retrieval_by_shape(imgs=[], shape=[[]], neigh_count=[], queries=[]): #TODO: Return indices
+def retrieval_by_shape(
+    imgs=[], shape=[[]], neigh_count=[], queries=[]
+):  # TODO: Return indices
     def intersect(labels_row=[]):
         return np.flatnonzero(np.intersect1d(labels_row, queries))
 
@@ -43,7 +110,7 @@ def retrieval_combined(
     col_pct=[[]],
     col_queries=[],
     shape_queries=[],
-): #TODO: Return indices
+):  # TODO: Return indices
     return retrieval_by_shape(
         retrieval_by_color(imgs, col, col_pct, col_queries),
         shape,
@@ -63,6 +130,13 @@ if __name__ == "__main__":
         test_class_labels,
         test_color_labels,
     ) = read_dataset(root_folder="./images/", gt_json="./images/gt.json")
+    n = 10
+    train_imgs = train_imgs[:n]
+    train_class_labels = train_class_labels[:n]
+    train_color_labels = train_color_labels[:n]
+    test_imgs = test_imgs[:n]
+    test_class_labels = test_class_labels[:n]
+    test_color_labels = test_color_labels[:n]
 
     # List with all the existent classes
     classes = list(set(list(train_class_labels) + list(test_class_labels)))
@@ -79,54 +153,81 @@ if __name__ == "__main__":
         "max_iter": 100,
         "fitting": "WCD",
     }
-    trueTest, trueCol, trueShape = (
-        test_imgs[:10],
-        test_color_labels[:10],
-        test_class_labels[:10],
-    )
     # Predict
     color_pred = []
-    for img in trueTest:
-        km = KMeans(img, 1, defaults)
-        km.find_bestK(7)
-        km.fit()
-        color_pred.append(km.centroids)
+    km = [KMeans(test_imgs[i], 3, defaults) for i in range(n)]
+    for classifier in km:
+        classifier.fit()
+        color_pred.append(classifier.centroids)
 
-    knn = KNN(train_imgs, train_class_labels)
-    shape_pred = knn.predict(trueTest, 10)
+    knn = KNN(rgb2gray(train_imgs), train_class_labels)
+    shape_pred = knn.predict(rgb2gray(test_imgs), 10)
 
-    # Qualitative
-    ## Query
-    query_col = input("Color query: ")
-    query_shape = input("Shape query: ")
-    if query_col:
-        if query_shape:
-            filtered_idx = retrieval_combined(
-                trueTest, shape_pred, [[]], color_pred, [[]], query_col, query_shape
+    max_visualize_count = 25
+    match menu():
+        case "qualCol":
+            query_col = input("Color query: ")
+            filtered_idx = retrieval_by_color(test_imgs, color_pred, [[]], query_col)
+            ok = color_pred[filtered_idx] == test_color_labels[filtered_idx]
+            visualize_retrieval(
+                test_imgs[filtered_idx],
+                max_visualize_count,
+                color_pred,
+                ok,
+                "Color filtering",
+                query_col,
             )
-        else:
+        case "qualShape":
+            query_col = input("Color query: ")
             filtered_idx = retrieval_by_color(trueTest, color_pred, [[]], query_col)
-    elif query_shape:
-        filtered_idx = retrieval_by_shape(trueTest, shape_pred, [[]], query_shape)
-    else:
-        print("No queries!")
+            ok = color_pred[filtered_idx] == trueCol[filtered_idx]
+            visualize_retrieval(
+                trueTest[filtered_idx],
+                max_visualize_count,
+                color_pred,
+                ok,
+                "Color filtering",
+                query_col,
+            )
+        # case "qualCombined":
+        #     query_col = input("Color query: ")
+        #     query_shape = input("Shape query: ")
+        #     filtered_idx = retrieval_combined(
+        #         trueTest, shape_pred, [[]], color_pred, [[]], query_col, query_shape
+        #     )
+        #     ok = shape_pred[filtered_idx] == trueShape[filtered_idx]
+        #     visualize_retrieval(
+        #         trueTest[filtered_idx],
+        #         max_visualize_count,
+        #         shape_pred,
+        #         ok,
+        #         "Shape filtering",
+        #         query_shape,
+        #     )
 
-    # Quantitative
+        case "quantKmeanStats":
+            # TODO: Select image
+            t = ""
+            while not t:
+                print()
+                t = input(f"Select image from 1 to {n}: ")
+                try:
+                    t = int(t)
+                except:
+                    print("Invalid Selection")
+                    t = ""
+            kmax = ""
+            while not kmax:
+                print()
+                kmax = input(f"Select k: ")
+                try:
+                    kmax = int(kmax)
+                except:
+                    kmax = ""
+            kmean_statistics(km[t - 1], kmax)
+        case "quantShapeAcc":
+            pass
+        case "quantColAcc":
+            pass
 
     # Visualize
-    max_visualize_count = 25
-    if query_col:
-        ok = color_pred[filtered_idx] == trueCol[filtered_idx]
-        visualize_retrieval(
-            trueTest[filtered_idx], max_visualize_count, color_pred, ok, "Color filtering", query_col
-        )
-    if query_shape:
-        ok = shape_pred[filtered_idx] == trueShape[filtered_idx]
-        visualize_retrieval(
-            trueTest[filtered_idx],
-            max_visualize_count,
-            shape_pred,
-            ok,
-            "Shape filtering",
-            query_shape,
-        )
