@@ -94,9 +94,14 @@ def get_color_accuracy(color_labels, ground_truth):
 def retrieval_by_color(
     imgs=[], cols=[[]], col_pct=[[]], queries=[]
 ):  # TODO: Return indices
+
     def intersect(col_row=[], row_colPct=[]):
-        idx = np.intersect1d(col_row, queries, return_indices=True)
-        hit_col, hit_pct = col_row[idx], row_colPct[idx]
+        row, idx, temp = np.intersect1d(col_row, queries, return_indices=True, assume_unique=True)
+        print(f"Whole row: {col_row}")
+        print(f"Intersection: {row} idx: {idx} ya mum: {temp}")
+        print(f"Rowcol: {row_colPct}")
+        hit_col, hit_pct = col_row[idx[0]], row_colPct[idx[0]]
+        print(f"col: {hit_col} pct: {hit_pct}")
         idx2 = np.argsort(hit_pct)
         return hit_col[idx2], hit_pct[idx2]
 
@@ -182,7 +187,10 @@ if __name__ == "__main__":
     match menu():
         case "qualCol":
             query_col = input("Color query: ")
-            filtered_idx = retrieval_by_color(test_imgs, color_pred, [[]], query_col)
+            # array_col = np.fromstring(query_col , dtype=str, sep=',')
+            array_col = np.array([x.strip() for x in query_col.split(",")])
+            print(f"Query array: {array_col}")
+            filtered_idx = retrieval_by_color(test_imgs, color_pred, [[]], array_col)
             ok = color_pred[filtered_idx] == test_color_labels[filtered_idx]
             visualize_retrieval(
                 test_imgs[filtered_idx],
