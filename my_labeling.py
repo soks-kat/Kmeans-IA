@@ -99,15 +99,23 @@ def retrieval_by_color(
         row, idx, temp = np.intersect1d(col_row, queries, return_indices=True, assume_unique=True)
         print(f"Whole row: {col_row}")
         print(f"Intersection: {row} idx: {idx} ya mum: {temp}")
-        print(f"Rowcol: {row_colPct}")
-        hit_col, hit_pct = col_row[idx[0]], row_colPct[idx[0]]
+        print(f"Rowcol: {col_row} pct: {row_colPct}")
+        hit_col = col_row[idx]
+        hit_pct = row_colPct[idx];
         print(f"col: {hit_col} pct: {hit_pct}")
-        idx2 = np.argsort(hit_pct)
-        return hit_col[idx2], hit_pct[idx2]
+        return hit_col.size != 0, np.sum(hit_pct)
+        # return idx2
 
-    matches, match_pct = np.apply_along_axis(intersect, 1, cols)
-    idx = np.argwhere(matches)
-    return imgs[idx][np.argsort(match_pct[idx])]
+    # matches, match_pct = np.apply_along_axis(intersect, 1, cols)
+    matches = np.empty(len(cols), dtype=str)
+    match_pct = np.empty(len(cols), dtype=float)
+    print(f"Cols: {cols} colpct: {col_pct}")
+    for i,(x,y) in enumerate(zip(cols, col_pct)):
+        matches[i], match_pct[i] = intersect(x,y)
+        print(f"Matches: {matches[i]} {match_pct[i]}%")
+    idx = np.where(matches == 'T')[0]
+    print(f"Full matches: {matches}")
+    return idx[np.argsort(match_pct[idx])[::-1]]
 
 
 def retrieval_by_shape(
@@ -174,11 +182,13 @@ if __name__ == "__main__":
     }
     # Predict
     color_pred = []
+    color_prc = []
     km = [KMeans(test_imgs[i], 3, defaults) for i in range(n)]
     for classifier in km:
         classifier.find_bestK(4)
         classifier.fit()
         color_pred.append(np.array(get_colors(classifier.centroids)))
+        color_prc.append(np.array(classifier.get_percentages()))
 
     knn = KNN(rgb2gray(train_imgs), train_class_labels)
     shape_pred = knn.predict(rgb2gray(test_imgs), 10)
@@ -190,16 +200,17 @@ if __name__ == "__main__":
             # array_col = np.fromstring(query_col , dtype=str, sep=',')
             array_col = np.array([x.strip() for x in query_col.split(",")])
             print(f"Query array: {array_col}")
-            filtered_idx = retrieval_by_color(test_imgs, color_pred, [[]], array_col)
-            ok = color_pred[filtered_idx] == test_color_labels[filtered_idx]
+            filtered_idx = retrieval_by_color(test_imgs, color_pred, color_prc, array_col)
+
+            print(f"Indexes: {filtered_idx} type {filtered_idx.dtype}")
+            # ok = np.array(color_pred)[filtered_idx] == test_color_labels[filtered_idx]
             visualize_retrieval(
                 test_imgs[filtered_idx],
                 max_visualize_count,
-                color_pred,
-                ok,
-                "Color filtering",
-                query_col,
             )
+                # ok,
+                # "Color filtering",
+                # query_col,
         case "qualShape":
             query_col = input("Color query: ")
             filtered_idx = retrieval_by_color(trueTest, color_pred, [[]], query_col)
