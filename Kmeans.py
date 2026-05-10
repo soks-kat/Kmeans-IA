@@ -30,9 +30,9 @@ class KMeans:
             "km_init": "first",
             "verbose": False,
             "tolerance": 0.0,
-            "opt_DEC": 0.8,
+            "opt_DEC": 0.2,
             "max_iter": 100,
-            "fitting": "WCD",
+            "fitting": "ICD",
         }
 
         if options is None:
@@ -120,20 +120,63 @@ class KMeans:
         )
         return distance_val
 
+    def interClassDistance(self):
+        result = 0
+        for i in range(self.K):
+            matchingIdx = self.labels == i
+            result += np.sum(
+                np.square(
+                    np.min(
+                        distance(self.X[matchingIdx], self.X[~matchingIdx]),
+                        axis=1,
+                    )
+                )
+            )
+
+        distance_val = result / self.X.shape[0]
+        return distance_val
+
     def find_bestK(self, max_K):
         optDEC = self.options["opt_DEC"]
-        self.K = 2
-        self.fit()
-        prevWCD = self.withinClassDistance()
-        foundOptimal = False
-        self.K = 3
-        while self.K <= max_K and not foundOptimal:
+        if self.options["fitting"] == "WCD":
+            self.K = 2
             self.fit()
-            wcd = self.withinClassDistance()
-            foundOptimal = (wcd / prevWCD) > optDEC
-            prevWCD = wcd
-            self.K += 1
-        self.K = self.K - 2
+            prev = self.withinClassDistance()
+            foundOptimal = False
+            self.K = 3
+            while self.K <= max_K and not foundOptimal:
+                self.fit()
+                current = self.withinClassDistance()
+                foundOptimal = (current / prev) > optDEC
+                prev = current
+                self.K += 1
+            self.K = self.K - 2
+        elif self.options["fitting"] == "ICD":
+            self.K = 2
+            self.fit()
+            prev = self.interClassDistance()
+            foundOptimal = False
+            self.K = 3
+            while self.K <= max_K and not foundOptimal:
+                self.fit()
+                current = self.interClassDistance()
+                foundOptimal = (current / prev) < optDEC
+                prev = current
+                self.K += 1
+            self.K = self.K - 2
+        elif self.options["fitting"] == "Fisher":
+            self.K = 2
+            self.fit()
+            prev = self.withinClassDistance() / self.interClassDistance()
+            foundOptimal = False
+            self.K = 3
+            while self.K <= max_K and not foundOptimal:
+                self.fit()
+                current = self.withinClassDistance() / self.interClassDistance()
+                foundOptimal = (current / prev) > optDEC
+                prev = current
+                self.K += 1
+            self.K = self.K - 2
 
 
 def distance(X, C):
