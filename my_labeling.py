@@ -171,7 +171,7 @@ if __name__ == "__main__":
     color_pred = []
     km = [KMeans(test_imgs[i], 3, defaults) for i in range(n)]
     for classifier in km:
-        classifier.find_bestK(4)
+        classifier.find_bestK(6)
         classifier.fit()
         color_pred.append(np.array(get_colors(classifier.centroids)))
 

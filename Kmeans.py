@@ -32,7 +32,7 @@ class KMeans:
             "tolerance": 0.0,
             "opt_DEC": 0.2,
             "max_iter": 100,
-            "fitting": "ICD",
+            "fitting": "WCD",
         }
 
         if options is None:
@@ -114,10 +114,27 @@ class KMeans:
             i += 1
         self.num_iter = i
 
+    # def withinClassDistance(self):
+    #     distance_val = (
+    #         np.sum(np.square(self.X - self.centroids[self.labels])) / self.X.shape[0]
+    #     )
+    #     return distance_val
     def withinClassDistance(self):
-        distance_val = (
-            np.sum(np.square(self.X - self.centroids[self.labels])) / self.X.shape[0]
-        )
+        result = 0
+        for i in range(self.K):
+            matchingIdx = self.labels == i
+            if self.X[matchingIdx].shape[0] != 0:
+                distances = remove_diag(distance(self.X[matchingIdx], self.X[matchingIdx]))
+                result += np.sum(
+                    np.square(
+                        np.sort(
+                            distances,
+                            axis=1,
+                        )
+                    )
+                )
+
+        distance_val = result / self.X.shape[0]
         return distance_val
 
     def interClassDistance(self):
@@ -190,3 +207,9 @@ def distance(X, C):
 def get_colors(centroids):
     result = colors[np.argmax(get_color_prob(centroids), axis=1)]
     return list(result)
+
+def remove_diag(x):
+    x_no_diag = np.ndarray.flatten(x)
+    x_no_diag = np.delete(x_no_diag, range(0, len(x_no_diag), len(x) + 1), 0)
+    x_no_diag = x_no_diag.reshape(len(x), len(x) - 1)
+    return x_no_diag
