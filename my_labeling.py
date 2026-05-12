@@ -171,7 +171,7 @@ if __name__ == "__main__":
     # cropped_images = crop_images(imgs, upper, lower)
 
     defaults = {
-        "km_init": "random",
+        "km_init": "kmeans++",
         "verbose": False,
         "tolerance": 0,
         "opt_DEC": 0.8,
