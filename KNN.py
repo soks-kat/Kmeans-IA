@@ -1,6 +1,7 @@
 __authors__ = ["1752407", "1703664"]
 __group__ = "07"
 
+from enum import unique
 import numpy as np
 
 # import math
@@ -59,6 +60,22 @@ class KNN:
         neighbor_idx = cdist(test_data, self.train_data, "euclidean").argsort(axis=1)
         self.neighbors_idx = self.labels_idx[neighbor_idx[:, :k]]
         self.neighbors = self.labels[neighbor_idx[:, :k]]
+
+    def get_percentages(self):
+        n_rows = self.neighbors.shape[0]
+        counts = []
+
+        for row in range(n_rows):
+            label, count = np.unique(self.neighbors[row, :], return_counts=True)
+            counts.append(count)
+
+        max_len = max(len(c) for c in counts)
+        padded_counts = np.zeros((self.neighbors.shape[0], max_len), dtype=int)
+
+        for i, count in enumerate(counts):
+            padded_counts[i, :len(count)] = count
+
+        return np.max(padded_counts, axis=1)/self.neighbors.shape[1]
 
     def get_class(self):
         """

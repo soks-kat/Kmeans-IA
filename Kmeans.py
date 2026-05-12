@@ -96,6 +96,13 @@ class KMeans:
             if x.size > 0:
                 self.centroids[i, :] = np.mean(x, 0)
 
+    def get_percentages(self):
+        percentages = np.zeros(self.K)
+        for i in range(self.K):
+            x = self.X[self.labels == i, :]
+            percentages[i] = x.shape[0]
+        return percentages / self.X.shape[0]
+
     def converges(self):
         return np.allclose(
             self.centroids, self.old_centroids, atol=self.options["tolerance"], rtol=0.0
