@@ -27,12 +27,12 @@ class KMeans:
 
     def _init_options(self, options):
         defaults = {
-            "km_init": "first",
-            "verbose": False,
+            "km_init": "kmeans++",
+            "debug": False,
             "tolerance": 0.0,
-            "opt_DEC": 0.2,
+            "opt_DEC": 0.66,
             "max_iter": 100,
-            "fitting": "WCD",
+            "fitting": "ICD",
         }
 
         if options is None:
@@ -121,86 +121,59 @@ class KMeans:
             i += 1
         self.num_iter = i
 
-    # def withinClassDistance(self):
-    #     distance_val = (
-    #         np.sum(np.square(self.X - self.centroids[self.labels])) / self.X.shape[0]
-    #     )
-    #     return distance_val
     def withinClassDistance(self):
-        result = 0
-        for i in range(self.K):
-            matchingIdx = self.labels == i
-            if self.X[matchingIdx].shape[0] != 0:
-                distances = remove_diag(distance(self.X[matchingIdx], self.X[matchingIdx]))
-                result += np.sum(
-                    np.square(
-                        np.sort(
-                            distances,
-                            axis=1,
-                        )
-                    )
-                )
-
-        distance_val = result / self.X.shape[0]
+        distance_val = (
+            np.sum(np.square(self.X - self.centroids[self.labels])) / self.X.shape[0]
+        )
         return distance_val
 
     def interClassDistance(self):
-        result = 0
-        for i in range(self.K):
-            matchingIdx = self.labels == i
-            result += np.sum(
-                np.square(
-                    np.min(
-                        distance(self.X[matchingIdx], self.X[~matchingIdx]),
-                        axis=1,
-                    )
-                )
-            )
+        return (
+            np.sum(np.partition(distance(self.X, self.centroids), 1, axis=1)[:, 1:])
+            / self.X.shape[0]
+        )
 
-        distance_val = result / self.X.shape[0]
-        return distance_val
+    def silhouette(self):
+        a = self.withinClassDistance()
+        b = self.interClassDistance()
+        return (b - a) / max(a, b)
 
     def find_bestK(self, max_K):
         optDEC = self.options["opt_DEC"]
-        if self.options["fitting"] == "WCD":
-            self.K = 2
-            self.fit()
-            prev = self.withinClassDistance()
-            foundOptimal = False
-            self.K = 3
-            while self.K <= max_K and not foundOptimal:
-                self.fit()
-                current = self.withinClassDistance()
-                foundOptimal = (current / prev) > optDEC
-                prev = current
-                self.K += 1
-            self.K = self.K - 2
-        elif self.options["fitting"] == "ICD":
-            self.K = 2
-            self.fit()
-            prev = self.interClassDistance()
-            foundOptimal = False
-            self.K = 3
-            while self.K <= max_K and not foundOptimal:
-                self.fit()
-                current = self.interClassDistance()
-                foundOptimal = (current / prev) < optDEC
-                prev = current
-                self.K += 1
-            self.K = self.K - 2
+        if self.options["fitting"] == "ICD":
+            getPrev = self.interClassDistance
+            descending = False
+        elif self.options["fitting"] == "Silhouette":
+            getPrev = self.silhouette
+            descending = False
+        elif self.options["fitting"] == "WCD":
+            getPrev = self.withinClassDistance
+            descending = True
         elif self.options["fitting"] == "Fisher":
-            self.K = 2
+            getPrev = lambda: (self.withinClassDistance() / self.interClassDistance())
+            descending = True
+        else:
+            raise Exception("Fitting Option not valid")
+
+        self.K = 2
+        self.fit()
+        prev = getPrev()
+
+        foundOptimal = False
+        wcdss: list = [prev]
+        while self.K <= max_K and not foundOptimal:
+            self.K += 1
             self.fit()
-            prev = self.withinClassDistance() / self.interClassDistance()
-            foundOptimal = False
-            self.K = 3
-            while self.K <= max_K and not foundOptimal:
-                self.fit()
-                current = self.withinClassDistance() / self.interClassDistance()
-                foundOptimal = (current / prev) > optDEC
-                prev = current
-                self.K += 1
-            self.K = self.K - 2
+            current = getPrev()
+            wcdss.append(current)
+            if descending:
+                ratio = current / prev
+            else:
+                ratio = prev / current
+            foundOptimal = ratio > 0.8
+            prev = current
+        self.K = self.K - 1
+        return wcdss
 
 
 def distance(X, C):
@@ -214,6 +187,7 @@ def distance(X, C):
 def get_colors(centroids):
     result = colors[np.argmax(get_color_prob(centroids), axis=1)]
     return list(result)
+
 
 def remove_diag(x):
     x_no_diag = np.ndarray.flatten(x)
