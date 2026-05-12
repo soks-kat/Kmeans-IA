@@ -145,9 +145,9 @@ def visualize_retrieval(imgs, topN, info=None, ok=None, title="", query=None):
         fig = plt.figure(figsize=(10, 8 * 6 / 8))
         columns += 1
         fig.add_subplot(rows, columns, 1 + columns)
-        plt.imshow(query)
+        # plt.imshow(query)
         plt.axis("off")
-        plt.title(f"query", fontsize=8)
+        plt.title(f"{query}", fontsize=8)
     else:
         fig = plt.figure(figsize=(8, 8 * 6 / 8))
 
