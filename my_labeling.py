@@ -99,7 +99,7 @@ def retrieval_by_color(
         row, idx, temp = np.intersect1d(col_row, queries, return_indices=True, assume_unique=True)
         hit_col = col_row[idx]
         hit_pct = row_colPct[idx];
-        return hit_col.size != 0, np.sum(hit_pct)
+        return hit_col.size != 0, np.sum(hit_pct) * len(hit_col)/len(queries)
         # return idx2
 
     # matches, match_pct = np.apply_along_axis(intersect, 1, cols)
@@ -155,7 +155,7 @@ if __name__ == "__main__":
         test_class_labels,
         test_color_labels,
     ) = read_dataset(root_folder="./images/", gt_json="./images/gt.json")
-    n = 10
+    n = 50
     # train_imgs = train_imgs[:n]
     # train_class_labels = train_class_labels[:n]
     # train_color_labels = train_color_labels[:n]
@@ -181,9 +181,9 @@ if __name__ == "__main__":
     # Predict
     color_pred = []
     color_prc = []
-    km = [KMeans(test_imgs[i], 3, defaults) for i in range(n)]
+    km = [KMeans(test_imgs[i], 4, defaults) for i in range(n)]
     for classifier in km:
-        classifier.find_bestK(4)
+        # classifier.find_bestK(4)
         classifier.fit()
         color_pred.append(np.array(get_colors(classifier.centroids)))
         color_prc.append(np.array(classifier.get_percentages()))
@@ -214,6 +214,7 @@ if __name__ == "__main__":
             visualize_retrieval(
                 test_imgs[filtered_idx],
                 max_visualize_count,
+                None,
                 ok,
                 "Color filtering",
                 query_col,
@@ -226,6 +227,7 @@ if __name__ == "__main__":
             visualize_retrieval(
                 test_imgs[filtered_idx],
                 max_visualize_count,
+                None,
                 ok,
                 "Color filtering",
                 query_shape,
