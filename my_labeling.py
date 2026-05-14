@@ -182,9 +182,39 @@ if __name__ == "__main__":
     # Predict
     color_pred = []
     color_prc = []
-    km = [KMeans(test_imgs[i], 4, defaults) for i in range(n)]
+    km = [KMeans(test_imgs[i], 3, defaults) for i in range(n)]
+
+    def findBestDEC(minDEC, maxDEC, pointCount, repetitions=3):
+        accuracies = []
+        bestDEC = 0
+        bestAcc = 0
+        for _ in range(repetitions):
+            for DEC in np.linspace(minDEC, maxDEC, pointCount):
+                color_pred = []
+                color_prc = []
+                for classifier in km:
+                    classifier.options["opt_DEC"] = DEC
+                    indexVals = classifier.find_bestK(7)
+                    classifier.fit()
+                    colors = np.array(get_colors(classifier.centroids))
+                    prcs = np.array(classifier.get_percentages())
+                    sorted_idx = np.argsort(prcs)[::-1]
+                    colors, prcs = colors[sorted_idx], prcs[sorted_idx]
+                    color_pred.append(colors)
+                    color_prc.append(prcs)
+                accuracy = get_color_accuracy(color_pred, test_color_labels)
+                if accuracy > bestAcc:
+                    bestAcc = accuracy
+                    bestDEC = DEC
+        for classifier in km:
+            classifier.options["opt_DEC"] = bestDEC
+        return bestDEC
+
+    # DEC = findBestDEC(0.73, 0.76, 8)
+    # print("Optimal DEC value: ", DEC)
+    i = 0
     for classifier in km:
-        # classifier.find_bestK(4)
+        indexVals = classifier.find_bestK(7)
         classifier.fit()
         colors = np.array(get_colors(classifier.centroids))
         prcs = np.array(classifier.get_percentages())
@@ -192,15 +222,11 @@ if __name__ == "__main__":
         colors, prcs = colors[sorted_idx], prcs[sorted_idx]
         color_pred.append(colors)
         color_prc.append(prcs)
+        i += 1
 
     knn = KNN(rgb2gray(train_imgs), train_class_labels)
     shape_pred = knn.predict(rgb2gray(test_imgs), 10)
     shape_prc = knn.get_percentages()
-
-    color_pred = np.array(color_pred)
-    color_prc = np.array(color_prc)
-    shape_pred = np.array(shape_pred)
-    shape_prc = np.array(shape_prc)
 
     max_visualize_count = 25
     match menu():

@@ -30,7 +30,7 @@ class KMeans:
             "km_init": "first",
             "verbose": False,
             "tolerance": 0.0,
-            "opt_DEC": 0.2,
+            "opt_DEC":  0.74285,
             "max_iter": 100,
             "fitting": "WCD",
         }
@@ -46,7 +46,7 @@ class KMeans:
             unique_indices = np.sort(np.unique(self.X, axis=0, return_index=True)[1])
             self.centroids = self.X[unique_indices[: self.K]]
 
-        if self.options["km_init"].lower() == "basic":
+        elif self.options["km_init"].lower() == "basic":
             assert self.K <= 14, "This method can at most implement 11 colors"
             basic_colors = np.array(
                 [
@@ -71,14 +71,14 @@ class KMeans:
             ]
             self.centroids = closest[: self.K]
 
-        if self.options["km_init"].lower() == "kmeans++":
+        elif self.options["km_init"].lower() == "kmeans++":
             rng = np.random.default_rng()
             self.centroids = np.zeros((self.K, 3))
-            p = np.ones(self.X.shape[0]) / self.X.shape[0]
+            self.centroids[0] = rng.choice(self.X)
             for i in range(1, self.K):
-                self.centroids[i] = rng.choice(self.X, p=p)
                 distances = np.min(distance(self.X, self.centroids[:i]), axis=1)
                 p = distances / np.sum(distances, dtype=float)
+                self.centroids[i] = rng.choice(self.X, p=p)
 
         else:
             self.centroids = np.random.rand(self.K, self.X.shape[1]) * 255
@@ -121,44 +121,28 @@ class KMeans:
             i += 1
         self.num_iter = i
 
-    # def withinClassDistance(self):
-    #     distance_val = (
-    #         np.sum(np.square(self.X - self.centroids[self.labels])) / self.X.shape[0]
-    #     )
-    #     return distance_val
     def withinClassDistance(self):
-        result = 0
-        for i in range(self.K):
-            matchingIdx = self.labels == i
-            if self.X[matchingIdx].shape[0] != 0:
-                distances = remove_diag(distance(self.X[matchingIdx], self.X[matchingIdx]))
-                result += np.sum(
-                    np.square(
-                        np.sort(
-                            distances,
-                            axis=1,
-                        )
-                    )
-                )
-
-        distance_val = result / self.X.shape[0]
+        distance_val = (
+            np.sum(np.square(self.X - self.centroids[self.labels])) / self.X.shape[0]
+        )
         return distance_val
 
-    def interClassDistance(self):
-        result = 0
-        for i in range(self.K):
-            matchingIdx = self.labels == i
-            result += np.sum(
-                np.square(
-                    np.min(
-                        distance(self.X[matchingIdx], self.X[~matchingIdx]),
-                        axis=1,
-                    )
-                )
-            )
+    def daviesBouldiniIndex(self):
+        s = np.zeros(self.K)
+        for k in range(self.K):
+            mask = (self.labels == k)
+            s[k] = np.linalg.norm(self.X[mask] - self.centroids[k], axis=1).mean()
+        diff = self.centroids[:, np.newaxis, :] - self.centroids[np.newaxis, :, :]
+        centroidDistance = np.linalg.norm(diff, axis=2)
+        bigS = s[:, np.newaxis] + s[np.newaxis, :]
+        with np.errstate(divide='ignore', invalid='ignore'):
+            ratio = np.divide(bigS, centroidDistance, where=centroidDistance>0)
+            ratio[centroidDistance == 0] = np.inf
+            np.fill_diagonal(ratio, -np.inf)
+        R_i = np.max(ratio, axis=1)
+        return np.mean(R_i)
 
-        distance_val = result / self.X.shape[0]
-        return distance_val
+
 
     def find_bestK(self, max_K):
         optDEC = self.options["opt_DEC"]
@@ -167,40 +151,27 @@ class KMeans:
             self.fit()
             prev = self.withinClassDistance()
             foundOptimal = False
-            self.K = 3
-            while self.K <= max_K and not foundOptimal:
+            values = [prev]
+            while self.K < max_K and not foundOptimal:
+                self.K += 1
                 self.fit()
                 current = self.withinClassDistance()
+                values.append(current)
                 foundOptimal = (current / prev) > optDEC
                 prev = current
-                self.K += 1
             self.K = self.K - 2
-        elif self.options["fitting"] == "ICD":
+            return values
+
+        elif self.options["fitting"] == "DBI":
             self.K = 2
-            self.fit()
-            prev = self.interClassDistance()
-            foundOptimal = False
-            self.K = 3
-            while self.K <= max_K and not foundOptimal:
+            values = []
+            while self.K < max_K:
                 self.fit()
-                current = self.interClassDistance()
-                foundOptimal = (current / prev) < optDEC
-                prev = current
+                values.append(self.daviesBouldiniIndex())
                 self.K += 1
-            self.K = self.K - 2
-        elif self.options["fitting"] == "Fisher":
-            self.K = 2
-            self.fit()
-            prev = self.withinClassDistance() / self.interClassDistance()
-            foundOptimal = False
-            self.K = 3
-            while self.K <= max_K and not foundOptimal:
-                self.fit()
-                current = self.withinClassDistance() / self.interClassDistance()
-                foundOptimal = (current / prev) > optDEC
-                prev = current
-                self.K += 1
-            self.K = self.K - 2
+            self.K = np.argmin(values) + 2
+            return values
+        else: raise Exception("Fitting option invalid")
 
 
 def distance(X, C):
