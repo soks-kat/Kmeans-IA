@@ -93,11 +93,11 @@ def retrieval_by_color(
     imgs=[], cols=[[]], col_pct=[[]], queries=[]
 ):  # TODO: Return indices
 
-    def intersect(col_row=[], row_colPct=[]):
-        row, idx, temp = np.intersect1d(col_row, queries, return_indices=True)
+    def intersect(col_row, row_colPct):
+        row, idx, temp = np.intersect1d(col_row[row_colPct > 0.1], queries, return_indices=True)
         hit_col = col_row[idx]
         hit_pct = row_colPct[idx]
-        return hit_col.size != 0, np.sum(hit_pct) * len(hit_col) / len(queries)
+        return len(idx) != 0, np.sum(hit_pct) * len(hit_col) / len(queries)
         # return idx2
 
     # matches, match_pct = np.apply_along_axis(intersect, 1, cols)
@@ -107,7 +107,28 @@ def retrieval_by_color(
         matches[i], match_pct[i] = intersect(x, y)
     idx = np.where(matches == "T")[0]
     return idx[np.argsort(match_pct[idx])[::-1]]
-
+    # def intersect(i):
+    #     col_row = cols[i]
+    #     row_colPct = col_pct[i]
+    #     _, idx, _ = np.intersect1d(
+    #         col_row[row_colPct > 0.05], queries, return_indices=True
+    #     )
+    #     hit_col = col_row[idx]
+    #     hit_pct = row_colPct[idx]
+    #     return np.sum(hit_pct) * len(hit_col) / len(queries)
+    #     # return idx2
+    #
+    # # matches, match_pct = np.apply_along_axis(intersect, 1, cols)
+    # # matches = np.empty(len(cols), dtype=str)
+    # # match_pct = np.empty(len(cols), dtype=float)
+    # # for i, (x, y) in enumerate(zip(cols, col_pct)):
+    # #     matches[i], match_pct[i] = intersect(x, y)
+    # # idx = np.where(matches == "T")[0]
+    # # return idx[np.argsort(match_pct[idx])[::-1]]
+    # intersect_pct = np.vectorize(intersect)(np.arange(len(imgs)))
+    # intersect_pct =[intersect_pct != 0]
+    # return np.argsort(intersect_pct)
+    #
 
 def retrieval_by_shape(
     imgs=[], shapes=[[]], shape_pct=[], queries=[]
@@ -202,7 +223,8 @@ if __name__ == "__main__":
         color_pred.append(colors)
         color_prc.append(prcs)
         i += 1
-
+    color_pred = np.array(color_pred, dtype='O')
+    color_prc = np.array(color_prc, dtype='O')
 
     max_visualize_count = 25
     while True:
@@ -223,10 +245,11 @@ if __name__ == "__main__":
                 visualize_retrieval(
                     test_imgs[filtered_idx],
                     max_visualize_count,
+                    # list(zip(color_pred[filtered_idx], color_prc[filtered_idx])),
                     test_color_labels[filtered_idx],
                     ok,
                     "Color filtering",
-                    query_col,
+                    # query_col,
                 )
             case "qualShape":
                 query_shape = input("Shape query: ")

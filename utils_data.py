@@ -139,7 +139,7 @@ def visualize_retrieval(imgs, topN, info=None, ok=None, title="", query=None):
             axis=2,
         )
 
-    columns = 4
+    columns = 2
     rows = math.ceil(topN / columns)
     if query is not None:
         fig = plt.figure(figsize=(10, 8 * 6 / 8))
