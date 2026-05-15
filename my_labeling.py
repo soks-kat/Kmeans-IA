@@ -8,14 +8,12 @@ import matplotlib.pyplot as plt
 __authors__ = "TO_BE_FILLED"
 __group__ = "TO_BE_FILLED"
 
-from Kmeans import KMeans
 from utils_data import (
     read_dataset,
     read_extended_dataset,
     crop_images,
     visualize_retrieval,
 )
-import utils_data
 
 
 def menu():
@@ -156,7 +154,7 @@ if __name__ == "__main__":
         test_class_labels,
         test_color_labels,
     ) = read_dataset(root_folder="./images/", gt_json="./images/gt.json")
-    n = 500
+    n = 50
     # train_imgs = train_imgs[:n]
     # train_class_labels = train_class_labels[:n]
     # train_color_labels = train_color_labels[:n]
@@ -167,45 +165,32 @@ if __name__ == "__main__":
     # List with all the existent classes
     classes = list(set(list(train_class_labels) + list(test_class_labels)))
 
-    # # Load extended ground truth
-    # imgs, class_labels, color_labels, upper, lower, background = read_extended_dataset()
-    # cropped_images = crop_images(imgs, upper, lower)
+    greyed_training = rgb2gray(train_imgs)
+    knn = KNN(greyed_training, train_class_labels)
+    shape_pred = knn.predict(rgb2gray(test_imgs), 10)
+    shape_prc = knn.get_percentages()
 
-    defaults = {
-    }
+    defaults = {}
     # Predict
     color_pred = []
     color_prc = []
-    km = [KMeans(test_imgs[i], 3, defaults) for i in range(n)]
 
-    def findBestDEC(minDEC, maxDEC, pointCount, repetitions=3):
-        accuracies = []
-        bestDEC = 0
-        bestAcc = 0
-        for _ in range(repetitions):
-            for DEC in np.linspace(minDEC, maxDEC, pointCount):
-                color_pred = []
-                color_prc = []
-                for classifier in km:
-                    classifier.options["opt_DEC"] = DEC
-                    indexVals = classifier.find_bestK(7)
-                    classifier.fit()
-                    colors = np.array(get_colors(classifier.centroids))
-                    prcs = np.array(classifier.get_percentages())
-                    sorted_idx = np.argsort(prcs)[::-1]
-                    colors, prcs = colors[sorted_idx], prcs[sorted_idx]
-                    color_pred.append(colors)
-                    color_prc.append(prcs)
-                accuracy = get_color_accuracy(color_pred, test_color_labels)
-                if accuracy > bestAcc:
-                    bestAcc = accuracy
-                    bestDEC = DEC
-        for classifier in km:
-            classifier.options["opt_DEC"] = bestDEC
-        return bestDEC
+    def get_cropped_image(i):
+        shape = shape_pred[i]
+        img = test_imgs[i]
+        if shape == "Jeans":
+            return img[15:-15, 18:-18]
+        elif shape == "Dresses":
+            return img[30:-15, 20:-20]
+        elif shape == "Shirts":
+            return img[26:-28, 20:-20]
+        elif shape == "Shorts":
+            return img[20:-20, 18:-18]
+        return img
 
-    # DEC = findBestDEC(0.73, 0.76, 8)
-    # print("Optimal DEC value: ", DEC)
+    cropped_images = [get_cropped_image(i) for i in range(n)]
+    km = [KMeans(cimg, 3, defaults) for cimg in cropped_images]
+
     i = 0
     for classifier in km:
         indexVals = classifier.find_bestK(7)
@@ -218,12 +203,10 @@ if __name__ == "__main__":
         color_prc.append(prcs)
         i += 1
 
-    knn = KNN(rgb2gray(train_imgs), train_class_labels)
-    shape_pred = knn.predict(rgb2gray(test_imgs), 10)
-    shape_prc = knn.get_percentages()
 
     max_visualize_count = 25
     while True:
+        print()
         match menu():
             case "qualCol":
                 query_col = input("Color query: ")
@@ -240,7 +223,7 @@ if __name__ == "__main__":
                 visualize_retrieval(
                     test_imgs[filtered_idx],
                     max_visualize_count,
-                    None,
+                    test_color_labels[filtered_idx],
                     ok,
                     "Color filtering",
                     query_col,
@@ -257,7 +240,7 @@ if __name__ == "__main__":
                 visualize_retrieval(
                     test_imgs[filtered_idx],
                     max_visualize_count,
-                    None,
+                    test_class_labels[filtered_idx],
                     ok,
                     "Color filtering",
                     query_shape,
