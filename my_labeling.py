@@ -11,7 +11,6 @@ __group__ = "TO_BE_FILLED"
 from utils_data import (
     read_dataset,
     read_extended_dataset,
-    crop_images,
     visualize_retrieval,
 )
 
@@ -175,7 +174,7 @@ if __name__ == "__main__":
         test_class_labels,
         test_color_labels,
     ) = read_dataset(root_folder="./images/", gt_json="./images/gt.json")
-    n = 50
+    n = 500
     # train_imgs = train_imgs[:n]
     # train_class_labels = train_class_labels[:n]
     # train_color_labels = train_color_labels[:n]
@@ -206,7 +205,10 @@ if __name__ == "__main__":
         elif shape == "Shirts":
             return img[26:-28, 20:-20]
         elif shape == "Shorts":
-            return img[20:-20, 18:-18]
+            img = img[10:-45, 16:-15]
+            # plt.imshow(img)
+            # plt.show()
+            return img 
         return img
 
     cropped_images = [get_cropped_image(i) for i in range(n)]
@@ -214,7 +216,7 @@ if __name__ == "__main__":
 
     i = 0
     for classifier in km:
-        indexVals = classifier.find_bestK(7)
+        indexVals = classifier.find_bestK(5)
         classifier.fit()
         colors = np.array(get_colors(classifier.centroids))
         prcs = np.array(classifier.get_percentages())
@@ -245,8 +247,9 @@ if __name__ == "__main__":
                 visualize_retrieval(
                     test_imgs[filtered_idx],
                     max_visualize_count,
-                    # list(zip(color_pred[filtered_idx], color_prc[filtered_idx])),
-                    test_color_labels[filtered_idx],
+                    list(zip(color_pred[filtered_idx], color_prc[filtered_idx])),
+                    # test_color_labels[filtered_idx],
+                    # color_pred[filtered_idx],
                     ok,
                     "Color filtering",
                     # query_col,
