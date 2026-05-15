@@ -23,6 +23,9 @@ class KMeans:
         if mX.ndim != 2:
             shape = mX.shape
             mX = mX.reshape(shape[0] * shape[1], shape[2])
+
+        mX = mX[np.all(mX != 255, axis=1)]
+
         self.X = mX
 
     def _init_options(self, options):
