@@ -5,6 +5,30 @@ def rgb2gray(rgb):
     return np.dot(rgb[..., :3], [0.2989, 0.5870, 0.1140])
 
 
+def rgb2yuv(rgb):
+    rgb = rgb/255
+    conversionMat = np.array([[0.277, 0.587, 0.114],
+                              [-0.14713, -0.28886, 0.436],
+                              [0.615, -0.51499, 0.10001]])
+
+    return conversionMat @ rgb
+
+def rgb2oklab(rgb):
+    rgb = rgb/255
+    conversionMat = np.array([[0.4122214708, 0.5363325363, 0.051445992],
+                            [0.2119034982, 0.6806995451, 0.107396956],
+                            [0.0883024619, 0.2817188376, 0.629978700]])
+
+    return conversionMat @ rgb
+
+def oklab2rgb(oklab):
+    conversionMat = np.array([[4.07674, -3.30771, 0.23097],
+                            [-1.26844, 2.60976, -0.341319],
+                            [-0.00419609, -0.703419, 1.70761]])
+
+    rgb = conversionMat @ oklab
+    return rgb*225
+
 def Sigmoid(s, t, b):
     return 1.0 / (1.0 + np.exp(-np.double(b) * (np.double(s) - np.double(t))))
 

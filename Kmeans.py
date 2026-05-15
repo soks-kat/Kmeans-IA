@@ -2,7 +2,7 @@ __authors__ = ["1752407", "1703664"]
 __group__ = "07"
 
 import numpy as np
-from utils import colors, get_color_prob
+from utils import colors, get_color_prob, oklab2rgb
 
 
 class KMeans:
@@ -104,6 +104,8 @@ class KMeans:
         for i in range(self.K):
             x = self.X[self.labels == i, :]
             percentages[i] = x.shape[0]
+
+        certainty = np.max(get_color_prob(np.apply_along_axis(oklab2rgb, 1, self.centroids)), axis=1)
         return percentages / self.X.shape[0]
 
     def converges(self):
@@ -186,7 +188,7 @@ def distance(X, C):
 
 
 def get_colors(centroids):
-    result = colors[np.argmax(get_color_prob(centroids), axis=1)]
+    result = colors[np.argmax(get_color_prob(np.apply_along_axis(oklab2rgb, 1, centroids)), axis=1)]
     return list(result)
 
 def remove_diag(x):
