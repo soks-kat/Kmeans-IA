@@ -24,7 +24,7 @@ class KMeans:
             shape = mX.shape
             mX = mX.reshape(shape[0] * shape[1], shape[2])
 
-        mX = mX[np.all(mX != 255, axis=1)]
+        mX = mX[np.all(mX < 245, axis=1)]
 
         self.X = mX
 
@@ -33,7 +33,8 @@ class KMeans:
             "km_init": "first",
             "verbose": False,
             "tolerance": 0.0,
-            "opt_DEC":  0.74285,
+            # "opt_DEC":  0.74285,
+            "opt_DEC":  0.70,
             "max_iter": 100,
             "fitting": "WCD",
         }
