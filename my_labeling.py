@@ -93,7 +93,9 @@ def retrieval_by_color(
 ):  # TODO: Return indices
 
     def intersect(col_row, row_colPct):
-        row, idx, temp = np.intersect1d(col_row[row_colPct > 0.1], queries, return_indices=True)
+        row, idx, temp = np.intersect1d(
+            col_row[row_colPct > 0.1], queries, return_indices=True
+        )
         hit_col = col_row[idx]
         hit_pct = row_colPct[idx]
         return len(idx) != 0, np.sum(hit_pct) * len(hit_col) / len(queries)
@@ -129,6 +131,7 @@ def retrieval_by_color(
     # return np.argsort(intersect_pct)
     #
 
+
 def retrieval_by_shape(
     imgs=[], shapes=[[]], shape_pct=[], queries=[]
 ):  # TODO: Return indices
@@ -163,8 +166,7 @@ def retrieval_combined(
     )
 
 
-if __name__ == "__main__":
-
+def my_labeling(kmeans=True, knn=True, cropped=True, defaults={}, comm="menu", n=None):
     # Load all the images and GT
     (
         train_imgs,
@@ -174,157 +176,171 @@ if __name__ == "__main__":
         test_class_labels,
         test_color_labels,
     ) = read_dataset(root_folder="./images/", gt_json="./images/gt.json")
-    n = 500
-    # train_imgs = train_imgs[:n]
-    # train_class_labels = train_class_labels[:n]
-    # train_color_labels = train_color_labels[:n]
-    test_imgs = test_imgs[:n]
-    test_class_labels = test_class_labels[:n]
-    test_color_labels = test_color_labels[:n]
+    if n is not None:
+        test_imgs = test_imgs[:n]
+        test_class_labels = test_class_labels[:n]
+        test_color_labels = test_color_labels[:n]
+    else:
+        n = len(test_imgs)
+    if knn:
+        # List with all the existent classes
+        classes = list(set(list(train_class_labels) + list(test_class_labels)))
 
-    # List with all the existent classes
-    classes = list(set(list(train_class_labels) + list(test_class_labels)))
+        greyed_training = rgb2gray(train_imgs)
+        knn = KNN(greyed_training, train_class_labels)
+        shape_pred = knn.predict(rgb2gray(test_imgs), 10)
+        shape_prc = knn.get_percentages()
 
-    greyed_training = rgb2gray(train_imgs)
-    knn = KNN(greyed_training, train_class_labels)
-    shape_pred = knn.predict(rgb2gray(test_imgs), 10)
-    shape_prc = knn.get_percentages()
+    if kmeans:
+        color_pred = []
+        color_prc = []
+        if cropped:
+            if not knn:
+                raise Exception("Cropping requires knn method")
 
-    defaults = {}
-    # Predict
-    color_pred = []
-    color_prc = []
+            def get_cropped_image(i):
+                shape = shape_pred[i]
+                img = test_imgs[i]
+                if shape == "Jeans":
+                    return img[15:-15, 18:-18]
+                elif shape == "Dresses":
+                    return img[30:-15, 20:-20]
+                elif shape == "Shirts":
+                    return img[26:-28, 20:-20]
+                elif shape == "Shorts":
+                    img = img[10:-45, 16:-15]
+                    # plt.imshow(img)
+                    # plt.show()
+                    return img
+                return img
 
-    def get_cropped_image(i):
-        shape = shape_pred[i]
-        img = test_imgs[i]
-        if shape == "Jeans":
-            return img[15:-15, 18:-18]
-        elif shape == "Dresses":
-            return img[30:-15, 20:-20]
-        elif shape == "Shirts":
-            return img[26:-28, 20:-20]
-        elif shape == "Shorts":
-            img = img[10:-45, 16:-15]
-            # plt.imshow(img)
-            # plt.show()
-            return img 
-        return img
+            cropped_images = [get_cropped_image(i) for i in range(n)]
+            km = [KMeans(cimg, 3, defaults) for cimg in cropped_images]
+        else:
+            km = [KMeans(img, 3, defaults) for img in test_imgs]
 
-    cropped_images = [get_cropped_image(i) for i in range(n)]
-    km = [KMeans(cimg, 3, defaults) for cimg in cropped_images]
-
-    i = 0
-    for classifier in km:
-        indexVals = classifier.find_bestK(5)
-        classifier.fit()
-        colors = np.array(get_colors(classifier.centroids))
-        prcs = np.array(classifier.get_percentages())
-        sorted_idx = np.argsort(prcs)[::-1]
-        colors, prcs = colors[sorted_idx], prcs[sorted_idx]
-        color_pred.append(colors)
-        color_prc.append(prcs)
-        i += 1
-    color_pred = np.array(color_pred, dtype='O')
-    color_prc = np.array(color_prc, dtype='O')
+        i = 0
+        for classifier in km:
+            indexVals = classifier.find_bestK(5)
+            classifier.fit()
+            colors = np.array(get_colors(classifier.centroids))
+            prcs = np.array(classifier.get_percentages())
+            sorted_idx = np.argsort(prcs)[::-1]
+            colors, prcs = colors[sorted_idx], prcs[sorted_idx]
+            color_pred.append(colors)
+            color_prc.append(prcs)
+            i += 1
+        color_pred = np.array(color_pred, dtype="O")
+        color_prc = np.array(color_prc, dtype="O")
 
     max_visualize_count = 25
-    while True:
-        print()
-        match menu():
-            case "qualCol":
-                query_col = input("Color query: ")
-                array_col = np.array(
-                    [x.strip().lower().capitalize() for x in query_col.split(",")]
-                )
-                filtered_idx = retrieval_by_color(
-                    test_imgs, color_pred, color_prc, array_col
-                )
+    if comm == "kmeans":
+        print(f"Color accuracy: {get_color_accuracy(color_pred, test_color_labels)}")
+    elif comm == "menu":
+        while True:
+            print()
+            match menu():
+                case "qualCol":
+                    query_col = input("Color query: ")
+                    array_col = np.array(
+                        [x.strip().lower().capitalize() for x in query_col.split(",")]
+                    )
+                    filtered_idx = retrieval_by_color(
+                        test_imgs, color_pred, color_prc, array_col
+                    )
 
-                ok = np.empty_like(filtered_idx)
-                for i, trueColors in enumerate(test_color_labels[filtered_idx]):
-                    ok[i] = len(np.intersect1d(array_col, trueColors)) != 0
-                visualize_retrieval(
-                    test_imgs[filtered_idx],
-                    max_visualize_count,
-                    list(zip(color_pred[filtered_idx], color_prc[filtered_idx])),
-                    # test_color_labels[filtered_idx],
-                    # color_pred[filtered_idx],
-                    ok,
-                    "Color filtering",
-                    # query_col,
-                )
-            case "qualShape":
-                query_shape = input("Shape query: ")
-                array_shape = np.array(
-                    [x.strip().lower().capitalize() for x in query_shape.split(",")]
-                )
-                filtered_idx = retrieval_by_shape(
-                    test_imgs, shape_pred, shape_prc, array_shape
-                )
-                ok = shape_pred[filtered_idx] == test_class_labels[filtered_idx]
-                visualize_retrieval(
-                    test_imgs[filtered_idx],
-                    max_visualize_count,
-                    test_class_labels[filtered_idx],
-                    ok,
-                    "Color filtering",
-                    query_shape,
-                )
-            case "qualCombined":
-                query_col = input("Color query: ")
-                array_col = np.array(
-                    [x.strip().lower().capitalize() for x in query_col.split(",")]
-                )
-                query_shape = input("Shape query: ")
-                array_shape = np.array(
-                    [x.strip().lower().capitalize() for x in query_shape.split(",")]
-                )
-                filtered_idx = retrieval_combined(
-                    test_imgs,
-                    shape_pred,
-                    shape_prc,
-                    color_pred,
-                    color_prc,
-                    array_col,
-                    array_shape,
-                )
-                ok = shape_pred[filtered_idx] == test_class_labels[filtered_idx]
-                visualize_retrieval(
-                    test_imgs[filtered_idx],
-                    max_visualize_count,
-                    ok,
-                    "Shape filtering",
-                    query_col + " " + query_shape,
-                )
+                    ok = np.empty_like(filtered_idx)
+                    for i, trueColors in enumerate(test_color_labels[filtered_idx]):
+                        ok[i] = len(np.intersect1d(array_col, trueColors)) != 0
+                    visualize_retrieval(
+                        test_imgs[filtered_idx],
+                        max_visualize_count,
+                        list(zip(color_pred[filtered_idx], color_prc[filtered_idx])),
+                        # test_color_labels[filtered_idx],
+                        # color_pred[filtered_idx],
+                        ok,
+                        "Color filtering",
+                        # query_col,
+                    )
+                case "qualShape":
+                    query_shape = input("Shape query: ")
+                    array_shape = np.array(
+                        [x.strip().lower().capitalize() for x in query_shape.split(",")]
+                    )
+                    filtered_idx = retrieval_by_shape(
+                        test_imgs, shape_pred, shape_prc, array_shape
+                    )
+                    ok = shape_pred[filtered_idx] == test_class_labels[filtered_idx]
+                    visualize_retrieval(
+                        test_imgs[filtered_idx],
+                        max_visualize_count,
+                        test_class_labels[filtered_idx],
+                        ok,
+                        "Color filtering",
+                        query_shape,
+                    )
+                case "qualCombined":
+                    query_col = input("Color query: ")
+                    array_col = np.array(
+                        [x.strip().lower().capitalize() for x in query_col.split(",")]
+                    )
+                    query_shape = input("Shape query: ")
+                    array_shape = np.array(
+                        [x.strip().lower().capitalize() for x in query_shape.split(",")]
+                    )
+                    filtered_idx = retrieval_combined(
+                        test_imgs,
+                        shape_pred,
+                        shape_prc,
+                        color_pred,
+                        color_prc,
+                        array_col,
+                        array_shape,
+                    )
+                    ok = shape_pred[filtered_idx] == test_class_labels[filtered_idx]
+                    visualize_retrieval(
+                        test_imgs[filtered_idx],
+                        max_visualize_count,
+                        ok,
+                        "Shape filtering",
+                        query_col + " " + query_shape,
+                    )
 
-            case "quantKmeanStats":
-                # TODO: Select image
-                t = ""
-                while not t:
-                    print()
-                    t = input(f"Select image from 1 to {n}: ")
-                    try:
-                        t = int(t)
-                    except:
-                        print("Invalid Selection")
-                        t = ""
-                kmax = ""
-                while not kmax:
-                    print()
-                    kmax = input(f"Select k: ")
-                    try:
-                        kmax = int(kmax)
-                    except:
-                        kmax = ""
-                kmean_statistics(km[t - 1], kmax)
-            case "quantShapeAcc":
-                print(
-                    f"Shape accuracy: {get_shape_accuracy(shape_pred, test_class_labels)}"
-                )
-            case "quantColAcc":
-                print(
-                    f"Color accuracy: {get_color_accuracy(color_pred, test_color_labels)}"
-                )
+                case "quantKmeanStats":
+                    # TODO: Select image
+                    t = ""
+                    while not t:
+                        print()
+                        t = input(f"Select image from 1 to {n}: ")
+                        try:
+                            t = int(t)
+                        except:
+                            print("Invalid Selection")
+                            t = ""
+                    kmax = ""
+                    while not kmax:
+                        print()
+                        kmax = input(f"Select k: ")
+                        try:
+                            kmax = int(kmax)
+                        except:
+                            kmax = ""
+                    kmean_statistics(km[t - 1], kmax)
+                case "quantShapeAcc":
+                    print(
+                        f"Shape accuracy: {get_shape_accuracy(shape_pred, test_class_labels)}"
+                    )
+                case "quantColAcc":
+                    print(
+                        f"Color accuracy: {get_color_accuracy(color_pred, test_color_labels)}"
+                    )
 
-        # Visualize
+            # Visualize
+
+
+if __name__ == "__main__":
+    defaults = {
+        "km_init": "first",
+        "opt_DEC": 0.8,
+    }
+    my_labeling(kmeans=True, knn=False, cropped=False, defaults=defaults, comm="kmeans")
