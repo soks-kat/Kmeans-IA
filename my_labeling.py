@@ -1,4 +1,4 @@
-from utils import rgb2gray
+from utils import rgb2gray, rgb2oklab
 import time
 from Kmeans import KMeans, get_colors
 from KNN import KNN
@@ -210,7 +210,7 @@ if __name__ == "__main__":
         return img
 
     cropped_images = [get_cropped_image(i) for i in range(n)]
-    km = [KMeans(cimg, 3, defaults) for cimg in cropped_images]
+    km = [KMeans(np.apply_along_axis(rgb2oklab, 2, cimg), 3, defaults) for cimg in cropped_images]
 
     i = 0
     for classifier in km:
