@@ -1,10 +1,23 @@
 from utils import rgb2gray
+from multiprocessing import Pool
 import time
 from Kmeans import KMeans, get_colors
 from improvement_utils import findBestDEC
 from KNN import KNN
 import numpy as np
 import matplotlib.pyplot as plt
+
+
+def classifyColor(classifier, DEC = 0.8):
+    classifier.options["opt_DEC"] = DEC
+    indexVals = classifier.find_bestK(5)
+    classifier.fit()
+    colors = np.array(get_colors(classifier.centroids))
+    prcs = np.array(classifier.get_percentages())
+    sorted_idx = np.argsort(prcs)[::-1]
+    colors, prcs = colors[sorted_idx], prcs[sorted_idx]
+    return colors, prcs
+
 
 __authors__ = "TO_BE_FILLED"
 __group__ = "TO_BE_FILLED"
@@ -14,6 +27,12 @@ from utils_data import (
     read_extended_dataset,
     visualize_retrieval,
 )
+
+
+def get_k_accuracy(km, test_color_labels):
+    myK = np.array([c.K for c in km])
+    trueK = np.array([len(labels) for labels in test_color_labels])
+    return sum(myK == trueK) / len(myK)
 
 
 def menu():
@@ -87,7 +106,6 @@ def get_color_accuracy(color_labels, ground_truth):
         accuracy = len(np.intersect1d(colors, trueColors)) / len(trueColors)
         result += accuracy
     return result / len(ground_truth)
-    
 
 
 def retrieval_by_color(
@@ -110,28 +128,6 @@ def retrieval_by_color(
         matches[i], match_pct[i] = intersect(x, y)
     idx = np.where(matches == "T")[0]
     return idx[np.argsort(match_pct[idx])[::-1]]
-    # def intersect(i):
-    #     col_row = cols[i]
-    #     row_colPct = col_pct[i]
-    #     _, idx, _ = np.intersect1d(
-    #         col_row[row_colPct > 0.05], queries, return_indices=True
-    #     )
-    #     hit_col = col_row[idx]
-    #     hit_pct = row_colPct[idx]
-    #     return np.sum(hit_pct) * len(hit_col) / len(queries)
-    #     # return idx2
-    #
-    # # matches, match_pct = np.apply_along_axis(intersect, 1, cols)
-    # # matches = np.empty(len(cols), dtype=str)
-    # # match_pct = np.empty(len(cols), dtype=float)
-    # # for i, (x, y) in enumerate(zip(cols, col_pct)):
-    # #     matches[i], match_pct[i] = intersect(x, y)
-    # # idx = np.where(matches == "T")[0]
-    # # return idx[np.argsort(match_pct[idx])[::-1]]
-    # intersect_pct = np.vectorize(intersect)(np.arange(len(imgs)))
-    # intersect_pct =[intersect_pct != 0]
-    # return np.argsort(intersect_pct)
-    #
 
 
 def retrieval_by_shape(
@@ -168,7 +164,15 @@ def retrieval_combined(
     )
 
 
-def my_labeling(kmeans=True, knn=True, cropped=True,filter_white=True, defaults={}, comm="menu", n=None):
+def my_labeling(
+    kmeans=True,
+    knn=True,
+    cropped=True,
+    filter_white=True,
+    defaults={},
+    comm="menu",
+    n=None,
+):
     # Load all the images and GT
     (
         train_imgs,
@@ -194,8 +198,6 @@ def my_labeling(kmeans=True, knn=True, cropped=True,filter_white=True, defaults=
         shape_prc = knn.get_percentages()
 
     if kmeans == True:
-        color_pred = []
-        color_prc = []
         if cropped == True:
             if not knn:
                 raise Exception("Cropping requires knn method")
@@ -220,43 +222,49 @@ def my_labeling(kmeans=True, knn=True, cropped=True,filter_white=True, defaults=
         else:
             kmeans_imgs = test_imgs
 
-        km = [KMeans(cimg, 3, defaults, filter_white=filter_white) for cimg in kmeans_imgs]
+        km = [
+            KMeans(cimg, 3, defaults, filter_white=filter_white) for cimg in kmeans_imgs
+        ]
 
-        i = 0
-        for classifier in km:
-            indexVals = classifier.find_bestK(5)
-            classifier.fit()
-            colors = np.array(get_colors(classifier.centroids))
-            prcs = np.array(classifier.get_percentages())
-            sorted_idx = np.argsort(prcs)[::-1]
-            colors, prcs = colors[sorted_idx], prcs[sorted_idx]
-            color_pred.append(colors)
-            color_prc.append(prcs)
-            i += 1
-        color_pred = np.array(color_pred, dtype="O")
-        color_prc = np.array(color_prc, dtype="O")
+        # color_pred = [[] for _ in range(n)]
+        # color_prc = [[] for _ in range(n)]
+        with Pool() as p:
+            preds = p.map(classifyColor, km)
+        color_pred = np.array([pred[0] for pred in preds], dtype="O")
+        color_prc = np.array([pred[1] for pred in preds], dtype="O")
 
     max_visualize_count = 25
     if comm == "kmeans_precision":
         print(get_color_accuracy(color_pred, test_color_labels))
-    elif comm == "Best K"
-        findBestDEC(km, 0.6, 0.8, 20, test_color_labels, get_color_accuracy, 3)
+    elif comm == "best_k":
+        accuracies = []
+        bestDEC = 0
+        bestAcc = 0
+        for _ in range(2):
+            for DEC in np.linspace(0.6, 0.8, 10):
+                with Pool() as p:
+                    preds = p.map(classifyColor, km)
+                color_pred = np.array([pred[0] for pred in preds], dtype="O")
+                color_prc = np.array([pred[1] for pred in preds], dtype="O")
+                accuracy = get_k_accuracy(km, test_color_labels)
+                if accuracy > bestAcc:
+                    bestAcc = accuracy
+                    bestDEC = DEC
+        for classifier in km:
+            classifier.options["opt_DEC"] = bestDEC
+        print("Optimal DEC value: ", DEC)
     elif comm == "visualize_filter_1":
         for img in test_imgs:
             img[img == 255] = 0
-            plt.imshow( img)
+            plt.imshow(img)
             plt.show()
     elif comm == "visualize_filter_2":
         for img in test_imgs:
             img[img > 240] = 0
-            plt.imshow( img)
+            plt.imshow(img)
             plt.show()
     elif comm == "bestk_precision":
-        myK = np.array([c.K for c in km])
-        trueK = np.array([len(labels) for labels in test_color_labels])
-        print("Exact K: ", sum(myK == trueK) / len(myK))
-        print("Bigger or equal K: ", sum(myK >= trueK) / len(myK))
-        print("Smaller K: ", sum(myK < trueK) / len(myK))
+        print("Exact K: ", get_k_accuracy(km, test_color_labels))
     elif comm == "menu":
         while True:
             print()
@@ -361,6 +369,13 @@ def my_labeling(kmeans=True, knn=True, cropped=True,filter_white=True, defaults=
 
 if __name__ == "__main__":
     defaults = {
-            "fitting": "DBI",
+        # "fitting": "DBI",
     }
-    my_labeling(kmeans=True, knn=True, cropped=True,filter_white=True, defaults=defaults, comm="bestk_precision")
+    my_labeling(
+        kmeans=True,
+        knn=True,
+        cropped=True,
+        filter_white=True,
+        defaults=defaults,
+        comm="best_k",
+    )

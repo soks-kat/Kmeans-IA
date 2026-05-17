@@ -2,6 +2,7 @@ from utils import rgb2gray
 from Kmeans import get_colors
 from utils_data import visualize_retrieval
 import numpy as np
+from multiprocessing import Pool
 
 def visualize_averages(knn, test_imgs, uniqueShapes):
     shape_pred = knn.predict(rgb2gray(test_imgs), 10)
@@ -23,29 +24,3 @@ def visualize_averages(knn, test_imgs, uniqueShapes):
     visualize_retrieval(shapeAverage, len(shapeAverage))
 
 
-def findBestDEC(km, minDEC, maxDEC, pointCount,test_color_labels, get_color_accuracy, repetitions=3):
-    accuracies = []
-    bestDEC = 0
-    bestAcc = 0
-    for _ in range(repetitions):
-        for DEC in np.linspace(minDEC, maxDEC, pointCount):
-            color_pred = []
-            color_prc = []
-            for classifier in km:
-                classifier.options["opt_DEC"] = DEC
-                indexVals = classifier.find_bestK(7)
-                classifier.fit()
-                colors = np.array(get_colors(classifier.centroids))
-                prcs = np.array(classifier.get_percentages())
-                sorted_idx = np.argsort(prcs)[::-1]
-                colors, prcs = colors[sorted_idx], prcs[sorted_idx]
-                color_pred.append(colors)
-                color_prc.append(prcs)
-            accuracy = get_color_accuracy(color_pred, test_color_labels)
-            if accuracy > bestAcc:
-                bestAcc = accuracy
-                bestDEC = DEC
-    for classifier in km:
-        classifier.options["opt_DEC"] = bestDEC
-    print("Optimal DEC value: ", DEC)
-    return bestDEC
