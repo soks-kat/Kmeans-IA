@@ -2,7 +2,6 @@ from utils import rgb2gray
 from multiprocessing import Pool
 import time
 from Kmeans import KMeans, get_colors
-from improvement_utils import findBestDEC
 from KNN import KNN
 import numpy as np
 import matplotlib.pyplot as plt
@@ -64,9 +63,9 @@ def menu():
 
 
 def kmean_statistics(classifier: KMeans, Kmax):
-    wcd = np.zeros(Kmax - 1)
-    iterations = np.zeros(Kmax - 1)
-    convTime = np.zeros(Kmax - 1)
+    wcd = np.zeros(Kmax - 2)
+    iterations = np.zeros(Kmax - 2)
+    convTime = np.zeros(Kmax - 2)
     for i in range(2, Kmax):
         classifier.K = i
         init = time.time()
@@ -79,17 +78,17 @@ def kmean_statistics(classifier: KMeans, Kmax):
     plt.subplot(131)
     plt.title("Convergence Time (ms)")
     plt.xlabel("K")
-    plt.plot(range(2, Kmax + 1), convTime)
+    plt.plot(range(2, Kmax), convTime)
 
     plt.subplot(132)
     plt.title("WCD")
     plt.xlabel("K")
-    plt.plot(range(2, Kmax + 1), wcd)
+    plt.plot(range(2, Kmax ), wcd)
 
     plt.subplot(133)
     plt.title("Iterations")
     plt.xlabel("K")
-    plt.plot(range(2, Kmax + 1), iterations)
+    plt.plot(range(2, Kmax ), iterations)
 
     plt.show()
 
@@ -372,10 +371,11 @@ if __name__ == "__main__":
         # "fitting": "DBI",
     }
     my_labeling(
+        n = 10,
         kmeans=True,
         knn=True,
         cropped=True,
         filter_white=True,
         defaults=defaults,
-        comm="best_k",
+        comm="menu",
     )
