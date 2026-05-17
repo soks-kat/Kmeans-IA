@@ -166,7 +166,7 @@ def retrieval_combined(
     )
 
 
-def my_labeling(kmeans=True, knn=True, cropped=True, defaults={}, comm="menu", n=None):
+def my_labeling(kmeans=True, knn=True, cropped=True,filter_white=True, defaults={}, comm="menu", n=None):
     # Load all the images and GT
     (
         train_imgs,
@@ -182,7 +182,7 @@ def my_labeling(kmeans=True, knn=True, cropped=True, defaults={}, comm="menu", n
         test_color_labels = test_color_labels[:n]
     else:
         n = len(test_imgs)
-    if knn:
+    if knn == True:
         # List with all the existent classes
         classes = list(set(list(train_class_labels) + list(test_class_labels)))
 
@@ -191,10 +191,10 @@ def my_labeling(kmeans=True, knn=True, cropped=True, defaults={}, comm="menu", n
         shape_pred = knn.predict(rgb2gray(test_imgs), 10)
         shape_prc = knn.get_percentages()
 
-    if kmeans:
+    if kmeans == True:
         color_pred = []
         color_prc = []
-        if cropped:
+        if cropped == True:
             if not knn:
                 raise Exception("Cropping requires knn method")
 
@@ -214,10 +214,13 @@ def my_labeling(kmeans=True, knn=True, cropped=True, defaults={}, comm="menu", n
                     return img
                 return img
 
-            cropped_images = [get_cropped_image(i) for i in range(n)]
-            km = [KMeans(cimg, 3, defaults) for cimg in cropped_images]
+            kmeans_imgs = [get_cropped_image(i) for i in range(n)]
         else:
-            km = [KMeans(img, 3, defaults) for img in test_imgs]
+            kmeans_imgs = test_imgs
+        if filter_white == True:
+            kmeans_imgs = [mX[np.all(mX < 245, axis=1)] for mX in kmeans_imgs]
+
+        km = [KMeans(cimg, 3, defaults) for cimg in kmeans_imgs]
 
         i = 0
         for classifier in km:
@@ -235,7 +238,7 @@ def my_labeling(kmeans=True, knn=True, cropped=True, defaults={}, comm="menu", n
 
     max_visualize_count = 25
     if comm == "kmeans":
-        print(f"Color accuracy: {get_color_accuracy(color_pred, test_color_labels)}")
+        print(get_color_accuracy(color_pred, test_color_labels))
     elif comm == "menu":
         while True:
             print()
@@ -340,7 +343,7 @@ def my_labeling(kmeans=True, knn=True, cropped=True, defaults={}, comm="menu", n
 
 if __name__ == "__main__":
     defaults = {
-        "km_init": "first",
+        "km_init": "basic",
         "opt_DEC": 0.8,
     }
-    my_labeling(kmeans=True, knn=False, cropped=False, defaults=defaults, comm="kmeans")
+    my_labeling(kmeans=True, knn=False, cropped=False,filter_white=False, defaults=defaults, comm="kmeans")

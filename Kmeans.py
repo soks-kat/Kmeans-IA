@@ -24,8 +24,6 @@ class KMeans:
             shape = mX.shape
             mX = mX.reshape(shape[0] * shape[1], shape[2])
 
-        mX = mX[np.all(mX < 245, axis=1)]
-
         self.X = mX
 
     def _init_options(self, options):
@@ -34,7 +32,7 @@ class KMeans:
             "verbose": False,
             "tolerance": 0.0,
             # "opt_DEC":  0.74285,
-            "opt_DEC":  0.70,
+            "opt_DEC": 0.70,
             "max_iter": 100,
             "fitting": "WCD",
         }
@@ -71,7 +69,7 @@ class KMeans:
                 ]
             )
             closest = basic_colors[
-                np.argsort(np.sum(distance(basic_colors, self.X), axis=1))
+                np.unique(np.argmin(distance(self.X, basic_colors), axis=1))[::-1]
             ]
             self.centroids = closest[: self.K]
 
@@ -85,7 +83,8 @@ class KMeans:
                 self.centroids[i] = rng.choice(self.X, p=p)
 
         else:
-            self.centroids = np.random.rand(self.K, self.X.shape[1]) * 255
+            rng = np.random.default_rng()
+            self.centroids = rng.random((self.K, self.X.shape[1])) * 255
 
         self.old_centroids = self.centroids.copy()
 
@@ -134,19 +133,17 @@ class KMeans:
     def daviesBouldiniIndex(self):
         s = np.zeros(self.K)
         for k in range(self.K):
-            mask = (self.labels == k)
+            mask = self.labels == k
             s[k] = np.linalg.norm(self.X[mask] - self.centroids[k], axis=1).mean()
         diff = self.centroids[:, np.newaxis, :] - self.centroids[np.newaxis, :, :]
         centroidDistance = np.linalg.norm(diff, axis=2)
         bigS = s[:, np.newaxis] + s[np.newaxis, :]
-        with np.errstate(divide='ignore', invalid='ignore'):
-            ratio = np.divide(bigS, centroidDistance, where=centroidDistance>0)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            ratio = np.divide(bigS, centroidDistance, where=centroidDistance > 0)
             ratio[centroidDistance == 0] = np.inf
             np.fill_diagonal(ratio, -np.inf)
         R_i = np.max(ratio, axis=1)
         return np.mean(R_i)
-
-
 
     def find_bestK(self, max_K):
         optDEC = self.options["opt_DEC"]
@@ -175,7 +172,8 @@ class KMeans:
                 self.K += 1
             self.K = np.argmin(values) + 2
             return values
-        else: raise Exception("Fitting option invalid")
+        else:
+            raise Exception("Fitting option invalid")
 
 
 def distance(X, C):
@@ -189,6 +187,7 @@ def distance(X, C):
 def get_colors(centroids):
     result = colors[np.argmax(get_color_prob(centroids), axis=1)]
     return list(result)
+
 
 def remove_diag(x):
     x_no_diag = np.ndarray.flatten(x)
