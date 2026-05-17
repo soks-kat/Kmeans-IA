@@ -7,8 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def classifyColor(classifier, DEC = 0.8):
-    classifier.options["opt_DEC"] = DEC
+def classifyColor(classifier):
     indexVals = classifier.find_bestK(5)
     classifier.fit()
     colors = np.array(get_colors(classifier.centroids))
@@ -16,7 +15,11 @@ def classifyColor(classifier, DEC = 0.8):
     sorted_idx = np.argsort(prcs)[::-1]
     colors, prcs = colors[sorted_idx], prcs[sorted_idx]
     return colors, prcs
-
+globalDEC = 0.8
+def bestKwithDEC(classifier):
+    classifier.options["opt_DEC"] = globalDEC
+    classifier.find_bestK(5)
+    return classifier.K
 
 __authors__ = "TO_BE_FILLED"
 __group__ = "TO_BE_FILLED"
@@ -31,6 +34,7 @@ from utils_data import (
 def get_k_accuracy(km, test_color_labels):
     myK = np.array([c.K for c in km])
     trueK = np.array([len(labels) for labels in test_color_labels])
+    print(list(zip(myK, trueK)))
     return sum(myK == trueK) / len(myK)
 
 
@@ -239,13 +243,14 @@ def my_labeling(
         accuracies = []
         bestDEC = 0
         bestAcc = 0
-        for _ in range(2):
+        trueK = np.array([len(labels) for labels in test_color_labels])
+        for _ in range(3):
             for DEC in np.linspace(0.6, 0.8, 10):
+                globalDEC = DEC
                 with Pool() as p:
-                    preds = p.map(classifyColor, km)
-                color_pred = np.array([pred[0] for pred in preds], dtype="O")
-                color_prc = np.array([pred[1] for pred in preds], dtype="O")
-                accuracy = get_k_accuracy(km, test_color_labels)
+                    myK = p.map(bestKwithDEC, km)
+                myK = np.array(myK)
+                accuracy = sum(myK == trueK) / len(myK)                
                 if accuracy > bestAcc:
                     bestAcc = accuracy
                     bestDEC = DEC
@@ -371,11 +376,11 @@ if __name__ == "__main__":
         # "fitting": "DBI",
     }
     my_labeling(
-        n = 10,
+        # n = 10,
         kmeans=True,
         knn=True,
         cropped=True,
         filter_white=True,
         defaults=defaults,
-        comm="menu",
+        comm="best_k",
     )
