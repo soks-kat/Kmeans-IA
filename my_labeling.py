@@ -1,6 +1,7 @@
 from utils import rgb2gray
 import time
 from Kmeans import KMeans, get_colors
+from improvement_utils import findBestDEC
 from KNN import KNN
 import numpy as np
 import matplotlib.pyplot as plt
@@ -86,6 +87,7 @@ def get_color_accuracy(color_labels, ground_truth):
         accuracy = len(np.intersect1d(colors, trueColors)) / len(trueColors)
         result += accuracy
     return result / len(ground_truth)
+    
 
 
 def retrieval_by_color(
@@ -217,10 +219,8 @@ def my_labeling(kmeans=True, knn=True, cropped=True,filter_white=True, defaults=
             kmeans_imgs = [get_cropped_image(i) for i in range(n)]
         else:
             kmeans_imgs = test_imgs
-        if filter_white == True:
-            kmeans_imgs = [mX[np.all(mX < 245, axis=1)] for mX in kmeans_imgs]
 
-        km = [KMeans(cimg, 3, defaults) for cimg in kmeans_imgs]
+        km = [KMeans(cimg, 3, defaults, filter_white=filter_white) for cimg in kmeans_imgs]
 
         i = 0
         for classifier in km:
@@ -237,8 +237,26 @@ def my_labeling(kmeans=True, knn=True, cropped=True,filter_white=True, defaults=
         color_prc = np.array(color_prc, dtype="O")
 
     max_visualize_count = 25
-    if comm == "kmeans":
+    if comm == "kmeans_precision":
         print(get_color_accuracy(color_pred, test_color_labels))
+    elif comm == "Best K"
+        findBestDEC(km, 0.6, 0.8, 20, test_color_labels, get_color_accuracy, 3)
+    elif comm == "visualize_filter_1":
+        for img in test_imgs:
+            img[img == 255] = 0
+            plt.imshow( img)
+            plt.show()
+    elif comm == "visualize_filter_2":
+        for img in test_imgs:
+            img[img > 240] = 0
+            plt.imshow( img)
+            plt.show()
+    elif comm == "bestk_precision":
+        myK = np.array([c.K for c in km])
+        trueK = np.array([len(labels) for labels in test_color_labels])
+        print("Exact K: ", sum(myK == trueK) / len(myK))
+        print("Bigger or equal K: ", sum(myK >= trueK) / len(myK))
+        print("Smaller K: ", sum(myK < trueK) / len(myK))
     elif comm == "menu":
         while True:
             print()
@@ -343,7 +361,6 @@ def my_labeling(kmeans=True, knn=True, cropped=True,filter_white=True, defaults=
 
 if __name__ == "__main__":
     defaults = {
-        "km_init": "basic",
-        "opt_DEC": 0.8,
+            "fitting": "DBI",
     }
-    my_labeling(kmeans=True, knn=False, cropped=False,filter_white=False, defaults=defaults, comm="kmeans")
+    my_labeling(kmeans=True, knn=True, cropped=True,filter_white=True, defaults=defaults, comm="bestk_precision")

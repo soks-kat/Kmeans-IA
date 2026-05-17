@@ -7,16 +7,16 @@ from utils import colors, get_color_prob
 
 class KMeans:
 
-    def __init__(self, X, K=1, options=None):
+    def __init__(self, X, K=1, options=None, filter_white=True):
         """
         Constructor of KMeans class
         """
         self.num_iter = 0
         self.K = K
-        self._init_X(X)
+        self._init_X(X, filter_white)
         self._init_options(options)
 
-    def _init_X(self, mX):
+    def _init_X(self, mX, filter_white):
         if mX.dtype != np.float64:
             mX = mX.astype("float64")
 
@@ -24,15 +24,17 @@ class KMeans:
             shape = mX.shape
             mX = mX.reshape(shape[0] * shape[1], shape[2])
 
+        if filter_white is True:
+            mX = mX[np.all(mX < 245, axis=1)]
         self.X = mX
 
     def _init_options(self, options):
         defaults = {
-            "km_init": "first",
+            "km_init": "kmeans++",
             "verbose": False,
             "tolerance": 0.0,
             # "opt_DEC":  0.74285,
-            "opt_DEC": 0.70,
+            "opt_DEC": 0.80,
             "max_iter": 100,
             "fitting": "WCD",
         }
